@@ -1,5 +1,6 @@
 using VoiceReady.Core.Configuration;
 using VoiceReady.Core.Detection;
+using VoiceReady.Core.Input;
 using VoiceReady.Core.Memory;
 
 var memoryMapPath = args.Length > 0
@@ -42,19 +43,42 @@ catch (Exception ex)
 
 using (processReader)
 {
+var shutdown = new CancellationTokenSource();
+Console.CancelKeyPress += (_, eventArgs) =>
+{
+    eventArgs.Cancel = true;
+    shutdown.Cancel();
+};
+
 var menuReader = new MenuStateReader(processReader, memoryMap.MenuState.PointerPaths);
 var knownStates = memoryMap.MenuState.KnownStates.ToDictionary(state => state.Value, state => state.Name);
 var commandStates = commandMenuMap?.States.ToDictionary(state => state.MemoryValue) ?? [];
+var semicolonKey = new SemicolonKeyPoller();
+var temporaryExecutor = new TemporaryDoorCommandExecutor(menuReader, new KeyboardInput());
 
 Console.WriteLine($"Attached to {processReader.ProcessName} ({processReader.ProcessId}).");
 Console.WriteLine($"Reading {memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
+Console.WriteLine("Temporary test hotkey: ; executes Door -> Breach -> C2 -> Clear when DoorCommandMenu is active.");
 Console.WriteLine("Press Ctrl+C to stop.");
 
 int? lastValue = null;
 var hasPrinted = false;
 
-    while (true)
+    while (!shutdown.IsCancellationRequested)
     {
+        if (semicolonKey.WasPressed())
+        {
+            try
+            {
+                var executed = temporaryExecutor.TryExecuteBreachC2Clear(out var message);
+                Console.WriteLine($"{DateTimeOffset.Now:HH:mm:ss.fff} hotkey=; result={(executed ? "sent" : "blocked")} {message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{DateTimeOffset.Now:HH:mm:ss.fff} hotkey=; result=error {ex.Message}");
+            }
+        }
+
         var snapshot = menuReader.Read();
         var stateName = snapshot.VotedValue.HasValue && knownStates.TryGetValue(snapshot.VotedValue.Value, out var knownState)
             ? knownState
@@ -84,6 +108,8 @@ var hasPrinted = false;
             hasPrinted = true;
         }
 
-        Thread.Sleep(50);
+        Thread.Sleep(15);
     }
 }
+
+return 0;
