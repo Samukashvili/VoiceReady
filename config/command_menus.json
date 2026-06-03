@@ -26,6 +26,247 @@
       "notes": "F interaction prompt. Currently appears to take priority over command menu state when looking at interactable objects."
     },
     {
+      "name": "IndividualSwatCommandMenu",
+      "memoryValue": 14352684,
+      "category": "CommandMenu",
+      "notes": "Appears when looking at an individual SWAT team member while opening the command menu.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Move",
+          "opensState": "IndividualSwatMoveSubmenu"
+        },
+        {
+          "key": "2",
+          "name": "Focus",
+          "opensState": "IndividualSwatFocusSubmenu",
+          "variantNotes": "Conditional. Sometimes unavailable if the selected SWAT AI is executing a command that requires movement or mobility."
+        },
+        {
+          "key": "3",
+          "name": "SwapWith",
+          "opensState": "IndividualSwatSwapWithSubmenu",
+          "variantNotes": "Conditional. Available when the SWAT team is in active formation, stacked on a door, or actively holding a position."
+        },
+        {
+          "key": "4",
+          "name": "SearchRoom"
+        }
+      ]
+    },
+    {
+      "name": "IndividualSwatMoveSubmenu",
+      "memoryValue": 10617132,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Here"
+        },
+        {
+          "key": "2",
+          "name": "HereThenBack"
+        }
+      ]
+    },
+    {
+      "name": "IndividualSwatFocusSubmenu",
+      "memoryValue": 17891628,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Here"
+        },
+        {
+          "key": "2",
+          "name": "MyPosition"
+        },
+        {
+          "key": "3",
+          "name": "Door",
+          "variantNotes": "Only available when actively looking at a door or doorway."
+        },
+        {
+          "key": "4",
+          "name": "Target",
+          "variantNotes": "Only available when actively looking at an enemy or civilian NPC."
+        },
+        {
+          "key": "5",
+          "name": "Unfocus",
+          "variantNotes": "Conditional and unavailable by default. Cancels previous focus commands."
+        }
+      ]
+    },
+    {
+      "name": "IndividualSwatSwapWithSubmenu",
+      "memoryValue": 15466796,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Alpha"
+        },
+        {
+          "key": "2",
+          "name": "Charlie"
+        },
+        {
+          "key": "3",
+          "name": "Bravo"
+        },
+        {
+          "key": "4",
+          "name": "Delta"
+        }
+      ]
+    },
+    {
+      "name": "CivilianSuspectCommandMenu",
+      "memoryValue": 15663404,
+      "category": "CommandMenu",
+      "notes": "Appears when looking at a dead, incapacitated, or surrendered NPC, excluding SWAT AI.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Restrain"
+        },
+        {
+          "key": "2",
+          "name": "Move",
+          "opensState": "CivilianSuspectMoveSubmenu"
+        },
+        {
+          "key": "3",
+          "name": "Deploy",
+          "opensState": "CivilianSuspectDeploySubmenu",
+          "variantNotes": "Observed grayed out by default most of the time. Submenu value not identified yet."
+        },
+        {
+          "key": "4",
+          "name": "TurnAround"
+        },
+        {
+          "key": "5",
+          "name": "MoveToExit"
+        }
+      ]
+    },
+    {
+      "name": "CivilianSuspectMoveSubmenu",
+      "memoryValue": 13041964,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Here"
+        },
+        {
+          "key": "2",
+          "name": "MyPosition"
+        },
+        {
+          "key": "3",
+          "name": "Stop",
+          "variantNotes": "Only available if the NPC was previously ordered to move."
+        }
+      ]
+    },
+    {
+      "name": "DoorwayCommandMenu",
+      "memoryValue": 19398956,
+      "category": "CommandMenu",
+      "notes": "Appears on doorways or room transitions with no physical door.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "StackUp",
+          "opensState": "DoorStackUpSubmenu"
+        },
+        {
+          "key": "2",
+          "name": "Move",
+          "opensState": "DoorOpenSubmenu"
+        },
+        {
+          "key": "3",
+          "name": "Breach",
+          "opensState": "DoorBreachSubmenu",
+          "variantNotes": "Currently observed as unavailable. Need to verify whether it can become enabled."
+        },
+        {
+          "key": "4",
+          "name": "Scan",
+          "opensState": "DoorScanSubmenu"
+        },
+        {
+          "key": "5",
+          "name": "Cover"
+        }
+      ]
+    },
+    {
+      "name": "ThroughOpeningCommandMenu",
+      "memoryValue": 12124460,
+      "category": "CommandMenu",
+      "notes": "Appears when looking through an open door or doorway at another door/doorway. Rarely used; basic mapping only.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Doorway",
+          "opensState": "ThroughOpeningDoorwaySubmenu",
+          "variantNotes": "When looking through to a door, text becomes Door and opens the normal DoorCommandMenu."
+        },
+        {
+          "key": "2",
+          "name": "OtherDoorway",
+          "opensState": "ThroughOpeningDoorwaySubmenu",
+          "variantNotes": "When looking through to a door, text becomes OtherDoor and opens the normal DoorCommandMenu."
+        }
+      ],
+      "variants": [
+        {
+          "name": "DoorTarget",
+          "notes": "Doorway/OtherDoorway labels are replaced by Door/OtherDoor, and the next state is the normal DoorCommandMenu."
+        }
+      ]
+    },
+    {
+      "name": "GroundCommandMenu",
+      "memoryValue": 21823788,
+      "category": "CommandMenu",
+      "notes": "Appears when the player looks at the ground or a wall that does not trigger another command menu type.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "MoveTo"
+        },
+        {
+          "key": "2",
+          "name": "FallIn",
+          "opensState": "GroundFallInSubmenu"
+        },
+        {
+          "key": "3",
+          "name": "Cover"
+        },
+        {
+          "key": "4",
+          "name": "Hold"
+        },
+        {
+          "key": "5",
+          "name": "Deploy",
+          "opensState": "GroundDeploySubmenu"
+        },
+        {
+          "key": "6",
+          "name": "SearchArea"
+        }
+      ]
+    },
+    {
       "name": "DoorCommandMenu",
       "memoryValue": 26673452,
       "category": "CommandMenu",
@@ -111,6 +352,61 @@
       ]
     },
     {
+      "name": "GroundFallInSubmenu",
+      "memoryValue": 19202348,
+      "category": "CommandSubmenu",
+      "notes": "Shares the same memory value as DoorStackUpSubmenu but has different visible text because it is reached from GroundCommandMenu.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "SingleFile"
+        },
+        {
+          "key": "2",
+          "name": "DoubleFile"
+        },
+        {
+          "key": "3",
+          "name": "Diamond"
+        },
+        {
+          "key": "4",
+          "name": "Wedge"
+        }
+      ]
+    },
+    {
+      "name": "GroundDeploySubmenu",
+      "memoryValue": 24052012,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "DeployFlashbang"
+        },
+        {
+          "key": "2",
+          "name": "DeployStinger"
+        },
+        {
+          "key": "3",
+          "name": "DeployCSGas"
+        },
+        {
+          "key": "4",
+          "name": "Deploy9Bang"
+        },
+        {
+          "key": "5",
+          "name": "DeployChemlight"
+        },
+        {
+          "key": "6",
+          "name": "DeployShield"
+        }
+      ]
+    },
+    {
       "name": "DoorOpenSubmenu",
       "memoryValue": 26476844,
       "category": "CommandSubmenu",
@@ -177,6 +473,39 @@
         }
       ],
       "notes": "Every breach option opens the already mapped DoorOpenSubmenu."
+    },
+    {
+      "name": "ThroughOpeningDoorwaySubmenu",
+      "memoryValue": 21627180,
+      "category": "CommandSubmenu",
+      "notes": "Shares the same memory value as DoorBreachSubmenu, but in this parent context it represents a stripped-down doorway/door command menu.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "StackUp",
+          "opensState": "DoorStackUpSubmenu"
+        },
+        {
+          "key": "2",
+          "name": "Move",
+          "opensState": "DoorOpenSubmenu"
+        },
+        {
+          "key": "3",
+          "name": "Breach",
+          "opensState": "DoorBreachSubmenu",
+          "variantNotes": "Currently treated as uncertain/unavailable until tested."
+        },
+        {
+          "key": "4",
+          "name": "Scan",
+          "opensState": "DoorScanSubmenu"
+        },
+        {
+          "key": "5",
+          "name": "Cover"
+        }
+      ]
     },
     {
       "name": "DoorScanSubmenu",

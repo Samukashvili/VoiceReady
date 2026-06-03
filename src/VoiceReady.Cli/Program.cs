@@ -51,8 +51,13 @@ Console.CancelKeyPress += (_, eventArgs) =>
 };
 
 var menuReader = new MenuStateReader(processReader, memoryMap.MenuState.PointerPaths);
-var knownStates = memoryMap.MenuState.KnownStates.ToDictionary(state => state.Value, state => state.Name);
-var commandStates = commandMenuMap?.States.ToDictionary(state => state.MemoryValue) ?? [];
+var knownStates = memoryMap.MenuState.KnownStates.ToDictionary(
+    state => state.Value,
+    state => state.Aliases.Count == 0 ? state.Name : $"{state.Name}/{string.Join("/", state.Aliases)}");
+var commandStates = commandMenuMap?.States
+    .GroupBy(state => state.MemoryValue)
+    .ToDictionary(group => group.Key, group => group.ToArray())
+    ?? [];
 var semicolonKey = new SemicolonKeyPoller();
 var temporaryExecutor = new TemporaryDoorCommandExecutor(menuReader, new KeyboardInput());
 
@@ -89,8 +94,8 @@ var hasPrinted = false;
             var valueText = snapshot.VotedValue.HasValue
                 ? $"{snapshot.VotedValue.Value} ({stateName})"
                 : "no consensus";
-            var commandText = snapshot.VotedValue.HasValue && commandStates.TryGetValue(snapshot.VotedValue.Value, out var commandState)
-                ? $", category={commandState.Category}, commands={commandState.Commands.Count}"
+            var commandText = snapshot.VotedValue.HasValue && commandStates.TryGetValue(snapshot.VotedValue.Value, out var matchingCommandStates)
+                ? $", states={string.Join("/", matchingCommandStates.Select(state => state.Name))}, commands={string.Join("/", matchingCommandStates.Select(state => state.Commands.Count))}"
                 : string.Empty;
 
             Console.WriteLine(

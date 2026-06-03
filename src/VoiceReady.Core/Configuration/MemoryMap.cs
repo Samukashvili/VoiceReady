@@ -51,4 +51,6 @@ public sealed class KnownMenuState
     public string Name { get; init; } = string.Empty;
 
     public int Value { get; init; }
+
+    public List<string> Aliases { get; init; } = [];
 }

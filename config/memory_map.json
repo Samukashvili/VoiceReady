@@ -28,20 +28,68 @@
         "value": 26673452
       },
       {
-        "name": "DoorStackUpSubmenu",
-        "value": 19202348
+        "name": "DoorwayCommandMenu",
+        "value": 19398956
+      },
+      {
+        "name": "ThroughOpeningCommandMenu",
+        "value": 12124460
+      },
+      {
+        "name": "SharedFormationSubmenu",
+        "value": 19202348,
+        "aliases": [
+          "DoorStackUpSubmenu",
+          "GroundFallInSubmenu"
+        ]
       },
       {
         "name": "DoorOpenSubmenu",
         "value": 26476844
       },
       {
-        "name": "DoorBreachSubmenu",
-        "value": 21627180
+        "name": "SharedBreachLikeSubmenu",
+        "value": 21627180,
+        "aliases": [
+          "DoorBreachSubmenu",
+          "ThroughOpeningDoorwaySubmenu"
+        ]
       },
       {
         "name": "DoorScanSubmenu",
         "value": 16777516
+      },
+      {
+        "name": "GroundCommandMenu",
+        "value": 21823788
+      },
+      {
+        "name": "GroundDeploySubmenu",
+        "value": 24052012
+      },
+      {
+        "name": "CivilianSuspectCommandMenu",
+        "value": 15663404
+      },
+      {
+        "name": "CivilianSuspectMoveSubmenu",
+        "value": 13041964
+      },
+      {
+        "name": "IndividualSwatCommandMenu",
+        "value": 14352684
+      },
+      {
+        "name": "IndividualSwatMoveSubmenu",
+        "value": 10617132
+      },
+      {
+        "name": "IndividualSwatFocusSubmenu",
+        "value": 17891628
+      },
+      {
+        "name": "IndividualSwatSwapWithSubmenu",
+        "value": 15466796
       }
     ],
     "pointers": [
