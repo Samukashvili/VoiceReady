@@ -1,0 +1,270 @@
+{
+  "processNames": [
+    "ReadyOrNotSteam-Win64-Shipping",
+    "ReadyOrNotSteam-Win64-Shipping.exe"
+  ],
+  "menuState": {
+    "moduleName": "ReadyOrNotSteam-Win64-Shipping.exe",
+    "offsetOrder": "Listed",
+    "knownStates": [
+      {
+        "name": "EscapeMenu",
+        "value": 70780800
+      },
+      {
+        "name": "GameplayNoMenu",
+        "value": 13107400
+      },
+      {
+        "name": "BlankMenu",
+        "value": 3539244
+      },
+      {
+        "name": "InteractionPrompt",
+        "value": 2490406
+      },
+      {
+        "name": "DoorCommandMenu",
+        "value": 26673452
+      },
+      {
+        "name": "DoorStackUpSubmenu",
+        "value": 19202348
+      },
+      {
+        "name": "DoorOpenSubmenu",
+        "value": 26476844
+      },
+      {
+        "name": "DoorBreachSubmenu",
+        "value": 21627180
+      },
+      {
+        "name": "DoorScanSubmenu",
+        "value": 16777516
+      }
+    ],
+    "pointers": [
+      {
+        "name": "menuState.08981460.1",
+        "baseOffset": "08981460",
+        "offsets": ["1D8", "D8", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08981460.2",
+        "baseOffset": "08981460",
+        "offsets": ["1D8", "108", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08981460.3",
+        "baseOffset": "08981460",
+        "offsets": ["1D8", "D8", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08981460.4",
+        "baseOffset": "08981460",
+        "offsets": ["1D8", "108", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.089815C8.1",
+        "baseOffset": "089815C8",
+        "offsets": ["30", "D8", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.089815C8.2",
+        "baseOffset": "089815C8",
+        "offsets": ["30", "108", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.089815C8.3",
+        "baseOffset": "089815C8",
+        "offsets": ["30", "D8", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.089815C8.4",
+        "baseOffset": "089815C8",
+        "offsets": ["30", "108", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.1",
+        "baseOffset": "08CC8B50",
+        "offsets": ["30", "20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.2",
+        "baseOffset": "08CC8B50",
+        "offsets": ["20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.3",
+        "baseOffset": "08CC8B50",
+        "offsets": ["30", "28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.4",
+        "baseOffset": "08CC8B50",
+        "offsets": ["28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.5",
+        "baseOffset": "08CC8B50",
+        "offsets": ["30", "20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.6",
+        "baseOffset": "08CC8B50",
+        "offsets": ["20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.7",
+        "baseOffset": "08CC8B50",
+        "offsets": ["30", "28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B50.8",
+        "baseOffset": "08CC8B50",
+        "offsets": ["28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.1",
+        "baseOffset": "08CC8B58",
+        "offsets": ["10", "20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.2",
+        "baseOffset": "08CC8B58",
+        "offsets": ["18", "20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.3",
+        "baseOffset": "08CC8B58",
+        "offsets": ["10", "28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.4",
+        "baseOffset": "08CC8B58",
+        "offsets": ["18", "28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.5",
+        "baseOffset": "08CC8B58",
+        "offsets": ["10", "20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.6",
+        "baseOffset": "08CC8B58",
+        "offsets": ["18", "20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.7",
+        "baseOffset": "08CC8B58",
+        "offsets": ["10", "28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CC8B58.8",
+        "baseOffset": "08CC8B58",
+        "offsets": ["18", "28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.1",
+        "baseOffset": "08CF11F8",
+        "offsets": ["30", "20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.2",
+        "baseOffset": "08CF11F8",
+        "offsets": ["20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.3",
+        "baseOffset": "08CF11F8",
+        "offsets": ["30", "28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.4",
+        "baseOffset": "08CF11F8",
+        "offsets": ["28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.5",
+        "baseOffset": "08CF11F8",
+        "offsets": ["30", "20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.6",
+        "baseOffset": "08CF11F8",
+        "offsets": ["20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.7",
+        "baseOffset": "08CF11F8",
+        "offsets": ["30", "28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF11F8.8",
+        "baseOffset": "08CF11F8",
+        "offsets": ["28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.1",
+        "baseOffset": "08CF1200",
+        "offsets": ["10", "20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.2",
+        "baseOffset": "08CF1200",
+        "offsets": ["18", "20", "130", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.3",
+        "baseOffset": "08CF1200",
+        "offsets": ["10", "28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.4",
+        "baseOffset": "08CF1200",
+        "offsets": ["18", "28", "140", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.5",
+        "baseOffset": "08CF1200",
+        "offsets": ["10", "20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.6",
+        "baseOffset": "08CF1200",
+        "offsets": ["18", "20", "130", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.7",
+        "baseOffset": "08CF1200",
+        "offsets": ["10", "28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08CF1200.8",
+        "baseOffset": "08CF1200",
+        "offsets": ["18", "28", "140", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08ED86C0.1",
+        "baseOffset": "08ED86C0",
+        "offsets": ["118", "3E8", "10", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08ED86C0.2",
+        "baseOffset": "08ED86C0",
+        "offsets": ["118", "3E0", "78", "0", "58", "1B4"]
+      },
+      {
+        "name": "menuState.08ED86C0.3",
+        "baseOffset": "08ED86C0",
+        "offsets": ["118", "3E8", "10", "8", "68", "1B4"]
+      },
+      {
+        "name": "menuState.08ED86C0.4",
+        "baseOffset": "08ED86C0",
+        "offsets": ["118", "3E0", "78", "8", "68", "1B4"]
+      }
+    ]
+  }
+}

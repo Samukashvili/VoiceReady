@@ -1,0 +1,201 @@
+{
+  "defaultStackUpMode": "Auto",
+  "states": [
+    {
+      "name": "EscapeMenu",
+      "memoryValue": 70780800,
+      "category": "GenericUi",
+      "notes": "Escape menu with options, career stats, and exit buttons. Not expected to be used by command execution."
+    },
+    {
+      "name": "GameplayNoMenu",
+      "memoryValue": 13107400,
+      "category": "Closed",
+      "notes": "Game is running and no detected UI menu is open."
+    },
+    {
+      "name": "BlankMenu",
+      "memoryValue": 3539244,
+      "category": "CommandUiEdgeCase",
+      "notes": "Blank command-style menu with a white line. Mostly observed in headquarters, but may occur elsewhere."
+    },
+    {
+      "name": "InteractionPrompt",
+      "memoryValue": 2490406,
+      "category": "InteractionPrompt",
+      "notes": "F interaction prompt. Currently appears to take priority over command menu state when looking at interactable objects."
+    },
+    {
+      "name": "DoorCommandMenu",
+      "memoryValue": 26673452,
+      "category": "CommandMenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "StackUp",
+          "opensState": "DoorStackUpSubmenu"
+        },
+        {
+          "key": "2",
+          "name": "Open",
+          "opensState": "DoorOpenSubmenu",
+          "variantNotes": "If the door is locked, this slot is replaced by PickLock and does not open a submenu."
+        },
+        {
+          "key": "3",
+          "name": "Breach",
+          "opensState": "DoorBreachSubmenu"
+        },
+        {
+          "key": "4",
+          "name": "Scan",
+          "opensState": "DoorScanSubmenu"
+        },
+        {
+          "key": "5",
+          "name": "MirrorUnderDoor"
+        },
+        {
+          "key": "6",
+          "name": "WedgeDoor",
+          "variantNotes": "If a trap is present, DisarmTrap is inserted at key 6 and this shifts to key 7."
+        },
+        {
+          "key": "7",
+          "name": "Cover",
+          "variantNotes": "If a trap is present, this shifts to key 8."
+        },
+        {
+          "key": "8",
+          "name": "OpenDoor",
+          "variantNotes": "If a trap is present, this shifts to key 9. If the targeted door is already open, this slot is replaced by CloseDoor."
+        }
+      ],
+      "variants": [
+        {
+          "name": "LockedDoor",
+          "notes": "Open is replaced by PickLock at key 2 and does not open DoorOpenSubmenu."
+        },
+        {
+          "name": "TrappedDoor",
+          "notes": "A trap command is inserted at key 6, shifting WedgeDoor, Cover, and OpenDoor one slot later."
+        },
+        {
+          "name": "OpenDoor",
+          "notes": "When the targeted door is already open, key 8 is CloseDoor instead of OpenDoor. If trap-related slot shifting can coexist with this, the final key should be verified separately."
+        }
+      ]
+    },
+    {
+      "name": "DoorStackUpSubmenu",
+      "memoryValue": 19202348,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Split"
+        },
+        {
+          "key": "2",
+          "name": "Left"
+        },
+        {
+          "key": "3",
+          "name": "Right"
+        },
+        {
+          "key": "4",
+          "name": "Auto",
+          "defaultFor": "StackUp"
+        }
+      ]
+    },
+    {
+      "name": "DoorOpenSubmenu",
+      "memoryValue": 26476844,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Clear"
+        },
+        {
+          "key": "2",
+          "name": "ClearWithFlashbang"
+        },
+        {
+          "key": "3",
+          "name": "ClearWithStinger"
+        },
+        {
+          "key": "4",
+          "name": "ClearWithCSGas"
+        },
+        {
+          "key": "5",
+          "name": "ClearWith9Bang"
+        },
+        {
+          "key": "6",
+          "name": "ClearWithLauncher"
+        },
+        {
+          "key": "7",
+          "name": "ClearWithLeader"
+        }
+      ]
+    },
+    {
+      "name": "DoorBreachSubmenu",
+      "memoryValue": 21627180,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Kick",
+          "opensState": "DoorOpenSubmenu"
+        },
+        {
+          "key": "2",
+          "name": "Shotgun",
+          "opensState": "DoorOpenSubmenu"
+        },
+        {
+          "key": "3",
+          "name": "C2",
+          "opensState": "DoorOpenSubmenu"
+        },
+        {
+          "key": "4",
+          "name": "RAM",
+          "opensState": "DoorOpenSubmenu"
+        },
+        {
+          "key": "5",
+          "name": "Leader",
+          "opensState": "DoorOpenSubmenu"
+        }
+      ],
+      "notes": "Every breach option opens the already mapped DoorOpenSubmenu."
+    },
+    {
+      "name": "DoorScanSubmenu",
+      "memoryValue": 16777516,
+      "category": "CommandSubmenu",
+      "commands": [
+        {
+          "key": "1",
+          "name": "Slide"
+        },
+        {
+          "key": "2",
+          "name": "Pie"
+        },
+        {
+          "key": "3",
+          "name": "Peek"
+        }
+      ]
+    }
+  ]
+}
