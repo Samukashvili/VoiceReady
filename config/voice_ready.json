@@ -1,0 +1,30 @@
+{
+  "audio": {
+    "deviceNumber": 0,
+    "sampleRate": 16000,
+    "channels": 1,
+    "frameMilliseconds": 30,
+    "speechStartDb": -35,
+    "speechEndDb": -42,
+    "minimumSpeechMilliseconds": 350,
+    "trailingSilenceMilliseconds": 550,
+    "maximumSegmentMilliseconds": 7000
+  },
+  "transcription": {
+    "pythonExe": "python",
+    "workerScript": "tools/faster-whisper/transcribe.py",
+    "modelPath": "tools/faster-whisper/models/base.en",
+    "language": "en",
+    "device": "cpu",
+    "computeType": "int8"
+  },
+  "input": {
+    "commandMenuOpen": {
+      "kind": "MouseMiddle"
+    },
+    "keyHoldMilliseconds": 35,
+    "betweenKeysMilliseconds": 80,
+    "stateTransitionTimeoutMilliseconds": 700,
+    "closeMenuScanCode": "01"
+  }
+}

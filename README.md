@@ -23,6 +23,44 @@ dotnet run --project src\VoiceReady.Cli
 
 The CLI prints a new line whenever the voted menu-state value changes.
 
+Voice mode:
+
+```powershell
+dotnet run --project src\VoiceReady.Cli -- --voice
+```
+
+or:
+
+```bat
+run-voice.bat
+```
+
+For first-time setup from source, run:
+
+```bat
+install-dependencies.bat
+```
+
+Voice mode captures microphone audio, segments speech locally using an RMS/decibel threshold, sends completed snippets to the local faster-whisper worker, parses recognized command phrases, and executes state-gated key sequences.
+
+The faster-whisper worker is configured in `config/voice_ready.json`. The default expected layout is:
+
+```text
+tools/faster-whisper/
+  transcribe.py
+  requirements.txt
+  models/base.en/
+```
+
+The installer creates a local `.venv`, installs Python dependencies, and downloads the default `Systran/faster-whisper-base.en` model into the repo. Manual equivalent:
+
+```powershell
+python -m pip install -r tools\faster-whisper\requirements.txt
+python tools\faster-whisper\download_model.py
+```
+
+Then place a CTranslate2 faster-whisper model at `tools/faster-whisper/models/base.en`, or update `modelPath`.
+
 Known menu-state values currently include gameplay/no menu, escape menu, blank menu, interaction prompt, and the first door command/submenu states.
 
 ## Mapping Values

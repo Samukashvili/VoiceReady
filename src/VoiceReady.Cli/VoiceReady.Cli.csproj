@@ -7,6 +7,7 @@
   <ItemGroup>
     <None Include="..\..\config\memory_map.json" Link="config\memory_map.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\config\command_menus.json" Link="config\command_menus.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\config\voice_ready.json" Link="config\voice_ready.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>
