@@ -24,6 +24,22 @@ public sealed class VoiceCommandParser
             return ParseDoorBreach(tokens);
         }
 
+        if (HasAny(tokens, "remove", "unblock", "unjam") && HasAny(tokens, "wedge", "jam", "jammed", "block", "blocked", "door", "down", "time"))
+        {
+            return new CommandPlan(
+                "DoorRemoveWedge",
+                "DoorCommandMenu",
+                [new CommandStep("6", "RemoveWedge")]);
+        }
+
+        if (HasAny(tokens, "wedge", "where", "jam", "jammed", "block", "blocked") && HasAny(tokens, "door"))
+        {
+            return new CommandPlan(
+                "DoorWedge",
+                "DoorCommandMenu",
+                [new CommandStep("6", "WedgeDoor")]);
+        }
+
         if (HasAny(tokens, "search", "secure") && HasAny(tokens, "area", "room", "secure"))
         {
             return new CommandPlan(
@@ -32,7 +48,7 @@ public sealed class VoiceCommandParser
                 [new CommandStep("6", "SearchArea")]);
         }
 
-        if (HasAny(tokens, "restrain", "restraining", "restraying", "arrest", "aristing", "cuff", "cuffs", "restoring"))
+        if (HasAny(tokens, "restrain", "restraining", "restraying", "arrest", "arresting", "aristing", "cuff", "cuffs", "restoring"))
         {
             return new CommandPlan(
                 "CivilianSuspectRestrain",
@@ -78,7 +94,7 @@ public sealed class VoiceCommandParser
                 AlternativeInitialStates: ["DoorwayCommandMenu"]);
         }
 
-        if (HasPhrase(normalized, "move to") || HasAny(tokens, "move", "go") && HasAny(tokens, "there", "here"))
+        if (HasPhrase(normalized, "move to") || HasAny(tokens, "move", "moving", "go") && (tokens.Length == 1 || HasAny(tokens, "there", "here")))
         {
             return new CommandPlan(
                 "GroundMoveTo",
@@ -122,7 +138,7 @@ public sealed class VoiceCommandParser
     private static CommandPlan ParseDoorBreach(string[] tokens)
     {
         var breachKey = HasAny(tokens, "shotgun", "shotty") ? "2"
-            : HasAny(tokens, "c2", "c4", "charge", "charges", "explosive", "boom") ? "3"
+            : HasAny(tokens, "c2", "c4", "charge", "charges", "explosive", "explosives", "boom") ? "3"
             : HasAny(tokens, "ram", "battering") ? "4"
             : HasAny(tokens, "leader", "lead") ? "5"
             : "1";

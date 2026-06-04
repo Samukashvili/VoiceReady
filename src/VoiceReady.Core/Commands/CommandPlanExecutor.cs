@@ -119,7 +119,7 @@ public sealed class CommandPlanExecutor
         var snapshot = _menuStateReader.Read();
         if (snapshot.IsReliable && !IsClosed(snapshot))
         {
-            _keyboardInput.TapScanCode(_settings.CloseMenuScanCodeValue, TimeSpan.FromMilliseconds(_settings.KeyHoldMilliseconds));
+            TapCommandMenuOpen();
         }
     }
 

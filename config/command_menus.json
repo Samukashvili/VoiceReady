@@ -299,7 +299,7 @@
         {
           "key": "6",
           "name": "WedgeDoor",
-          "variantNotes": "If a trap is present, DisarmTrap is inserted at key 6 and this shifts to key 7."
+          "variantNotes": "If a trap is present, DisarmTrap is inserted at key 6 and this shifts to key 7. If the door is already wedged/jammed, this slot is replaced by RemoveWedge/RemoveDoorJam."
         },
         {
           "key": "7",
@@ -324,6 +324,10 @@
         {
           "name": "OpenDoor",
           "notes": "When the targeted door is already open, key 8 is CloseDoor instead of OpenDoor. If trap-related slot shifting can coexist with this, the final key should be verified separately."
+        },
+        {
+          "name": "JammedDoor",
+          "notes": "When the targeted door is already wedged/jammed, the WedgeDoor command is replaced by RemoveWedge/RemoveDoorJam in the same slot."
         }
       ]
     },
