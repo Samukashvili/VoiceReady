@@ -87,6 +87,19 @@ Update `config/memory_map.json` as you identify stable values:
 
 The value reader intentionally uses `Int32` / 4-byte reads because that matched the most reliable Cheat Engine observations.
 
+## Pointer Root Relocation
+
+Each distinct module-relative pointer root can define one wildcard byte signature in `config/memory_map.json`.
+At startup, VoiceReady scans the configured module, requires the signature to match exactly once, calculates
+the referenced root from its RIP-relative displacement, and caches the result for the lifetime of the process.
+
+The existing `baseOffset` remains a fallback when a signature is missing, malformed, or no longer unique.
+Startup diagnostics report `source=signature` or `source=fallback` for every root. A fallback after a game
+update means that root's signature should be regenerated and validated.
+
+New pointer paths that use an existing `baseOffset` automatically reuse its root signature. A pointer path
+with a new root should also add one entry to that pointer group's `rootSignatures` array.
+
 ## Pointer Offset Order
 
 The current config uses `Listed`, which matched the provided Cheat Engine pointer rows during a live smoke test:

@@ -99,6 +99,7 @@ using (processReader)
     int? lastValue = null;
     int? lastTeamValue = null;
     var hasPrinted = false;
+    var hasPrintedRootResolutions = false;
 
     while (!shutdown.IsCancellationRequested)
     {
@@ -117,6 +118,24 @@ using (processReader)
 
         var snapshot = menuReader.Read();
         var teamSnapshot = teamSelectionReader.Read();
+
+        if (!hasPrintedRootResolutions)
+        {
+            foreach (var root in processReader.RootResolutions.OrderBy(root => root.ConfiguredOffset))
+            {
+                var source = root.UsedSignature ? "signature" : "fallback";
+                var moved = root.ConfiguredOffset == root.ResolvedOffset
+                    ? string.Empty
+                    : $" moved-from=+0x{root.ConfiguredOffset:X}";
+                var reason = string.IsNullOrWhiteSpace(root.FallbackReason)
+                    ? string.Empty
+                    : $" reason={root.FallbackReason}";
+                Console.WriteLine(
+                    $"Pointer root {root.ModuleName}+0x{root.ResolvedOffset:X} source={source}{moved}{reason}");
+            }
+
+            hasPrintedRootResolutions = true;
+        }
         var stateName = snapshot.VotedValue.HasValue && knownStates.TryGetValue(snapshot.VotedValue.Value, out var knownState)
             ? knownState
             : "Unmapped";

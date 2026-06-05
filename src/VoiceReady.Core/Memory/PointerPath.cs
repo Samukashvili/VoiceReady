@@ -7,6 +7,7 @@ public sealed record PointerPath(
     string ModuleName,
     long BaseOffset,
     IReadOnlyList<long> Offsets,
+    PointerRootSignature? RootSignature = null,
     PointerOffsetOrder OffsetOrder = PointerOffsetOrder.CheatEnginePointerScanner)
 {
     public static PointerPath FromHex(
@@ -14,6 +15,7 @@ public sealed record PointerPath(
         string moduleName,
         string baseOffset,
         IEnumerable<string> offsets,
+        PointerRootSignature? rootSignature = null,
         PointerOffsetOrder offsetOrder = PointerOffsetOrder.CheatEnginePointerScanner)
     {
         return new PointerPath(
@@ -21,6 +23,7 @@ public sealed record PointerPath(
             moduleName,
             ParseHex(baseOffset),
             offsets.Select(ParseHex).ToArray(),
+            rootSignature,
             offsetOrder);
     }
 

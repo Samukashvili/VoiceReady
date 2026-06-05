@@ -6,6 +6,50 @@
   "menuState": {
     "moduleName": "ReadyOrNotSteam-Win64-Shipping.exe",
     "offsetOrder": "Listed",
+    "rootSignatures": [
+      {
+        "baseOffset": "08981460",
+        "pattern": "8B 01 FF 50 30 84 C0 74 ?? 41 0F B6 D4 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 44 39 74 24 38 74 ?? 48 8B 4C 24 30 48 85 C9",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "089815C8",
+        "pattern": "88 00 00 00 4C 8B C7 66 0F 7F 44 24 40 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? EB ?? 48 8B FB B9 18 00 00 00 49 89 3E",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08CC8B50",
+        "pattern": "B2 01 48 89 01 48 8B D9 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ?? 48 85 C9 74 ?? 48 81 C1 D8 00 00 00 48 8B D3",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08CC8B58",
+        "pattern": "08 48 89 0D ?? ?? ?? ?? 48 8D 54 24 58 48 8D 0D ?? ?? ?? ?? 4C 89 64 24 50 E8 ?? ?? ?? ?? 48 8B 4C 24 58 48 85 C9 74 ??",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08CF11F8",
+        "pattern": "30 48 8D 54 24 38 48 8D 0D ?? ?? ?? ?? 48 89 05 ?? ?? ?? ?? 4C 89 64 24 30 E8 ?? ?? ?? ?? 48 8B 5C 24 38 48 85 DB 74 ??",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08CF1200",
+        "pattern": "90 AA FF 48 8B 44 24 30 48 8D 54 24 38 48 8D 0D ?? ?? ?? ?? 48 89 05 ?? ?? ?? ?? 4C 89 64 24 30 E8 ?? ?? ?? ?? 48 8B 5C",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08ED86C0",
+        "pattern": "24 38 48 8B CB E8 ?? ?? ?? ?? 90 8B D7 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B D8 48 89 85 20 04 00 00 48 85 C0 75 ??",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      }
+    ],
     "knownStates": [
       {
         "name": "EscapeMenu",
@@ -318,6 +362,44 @@
   "teamSelection": {
     "moduleName": "ReadyOrNotSteam-Win64-Shipping.exe",
     "offsetOrder": "Listed",
+    "rootSignatures": [
+      {
+        "baseOffset": "08B1DB18",
+        "pattern": "8B 4D DF 48 85 C9 74 ?? E8 ?? ?? ?? ?? 48 8D 0D ?? ?? ?? ?? 44 88 76 08 E8 ?? ?? ?? ?? 48 8B CF E8 ?? ?? ?? ?? 4C 8B B4",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08D8A430",
+        "pattern": "42 08 4C 8B E9 45 85 C0 7E ?? 48 8B 02 48 89 05 ?? ?? ?? ?? 33 C0 49 8B E8 45 85 C0 0F 8E ?? ?? ?? ?? 48 89 5C 24 50 48",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08E33888",
+        "pattern": "48 8B 80 28 02 00 00 48 83 C4 20 5B C3 48 8B 05 ?? ?? ?? ?? 48 8B 80 28 02 00 00 48 83 C4 20 5B C3 CC CC CC CC CC 48 89",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08A53398",
+        "pattern": "48 C1 E3 04 66 0F 1F 84 00 00 00 00 00 48 8B 0D ?? ?? ?? ?? 83 7C 0B 08 00 74 ?? 48 8B 0C 0B 48 85 C9 74 ?? 41 0F 10 04",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08A50740",
+        "pattern": "C9 48 89 45 D8 4C 8D 45 D0 48 8D 55 28 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 7D C0 48 85 FF 74 ?? 48 8B CF",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      },
+      {
+        "baseOffset": "08A26400",
+        "pattern": "4C 0F 45 C2 41 8B 04 88 83 F8 FF 74 ?? 48 8B 15 ?? ?? ?? ?? 90 48 98 48 8D 0C 40 48 39 1C CA 48 8D 04 CA 74 ?? 8B 40 10",
+        "displacementOffset": 16,
+        "instructionEndOffset": 20
+      }
+    ],
     "knownSelections": [
       {
         "name": "NpcContext",
