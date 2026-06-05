@@ -9,7 +9,7 @@ public sealed class VoiceCommandParser
 
     private static readonly string[] FillerWords =
     [
-        "the", "a", "an", "and", "then", "using", "use", "with", "to", "in", "on", "at",
+        "the", "a", "an", "and", "then", "using", "use", "with", "to", "on", "at",
         "please", "team", "guys", "officers", "fucking", "fuckin", "damn", "goddamn", "him", "her", "it"
     ];
 
@@ -32,8 +32,9 @@ public sealed class VoiceCommandParser
 
     private static CommandPlan? ParseCommand(string normalized, string[] tokens)
     {
-        if (HasAny(tokens, "breach", "reach", "bridge", "breech", "break", "broke") ||
-            HasAny(tokens, "kick", "kicking") && HasAny(tokens, "door", "clear"))
+        if (HasAny(tokens, "breach", "reach", "bridge", "breech", "break", "broke", "blow") ||
+            HasAny(tokens, "kick", "kicking", "shotgun", "c2", "c4", "charge", "explosive", "explosives", "ram") &&
+            HasAny(tokens, "door", "clear"))
         {
             return ParseDoorBreach(tokens);
         }
@@ -86,7 +87,44 @@ public sealed class VoiceCommandParser
                 [new CommandStep("5", "MirrorUnderDoor")]);
         }
 
-        if (HasAny(tokens, "clear") || HasPhrase(normalized, "go in") || HasPhrase(normalized, "going in"))
+        if (HasAny(tokens, "pick") && HasAny(tokens, "lock", "door"))
+        {
+            return new CommandPlan(
+                "DoorPickLock",
+                "DoorCommandMenu",
+                [new CommandStep("2", "PickLock")]);
+        }
+
+        if (HasAny(tokens, "open", "close") && HasAny(tokens, "door"))
+        {
+            return new CommandPlan(
+                HasAny(tokens, "close") ? "DoorClose" : "DoorOpen",
+                "DoorCommandMenu",
+                [new CommandStep("8", "OpenOrCloseDoor")]);
+        }
+
+        if (HasAny(tokens, "scan", "slide", "pie", "peek"))
+        {
+            var scanKey = HasAny(tokens, "slide") ? "1"
+                : HasAny(tokens, "pie") ? "2"
+                : HasAny(tokens, "peek") ? "3"
+                : "2";
+
+            return new CommandPlan(
+                "DoorScan",
+                "DoorCommandMenu",
+                [
+                    new CommandStep("4", "Scan", "DoorScanSubmenu"),
+                    new CommandStep(scanKey, "ScanMethod")
+                ],
+                AlternativeInitialStates: ["DoorwayCommandMenu"]);
+        }
+
+        if (HasAny(tokens, "clear") ||
+            HasPhrase(normalized, "go in") ||
+            HasPhrase(normalized, "going in") ||
+            HasPhrase(normalized, "move in") ||
+            HasAny(tokens, "move", "moving", "enter") && HasClearMethod(tokens))
         {
             return ParseClear(tokens);
         }
@@ -106,6 +144,52 @@ public sealed class VoiceCommandParser
                     new CommandStep(stackKey, "StackMode")
                 ],
                 AlternativeInitialStates: ["DoorwayCommandMenu"]);
+        }
+
+        if (HasAny(tokens, "deploy"))
+        {
+            var deployKey = HasAny(tokens, "flash", "flashbang") ? "1"
+                : HasAny(tokens, "stinger", "sting") ? "2"
+                : HasAny(tokens, "cs", "gas", "tear") ? "3"
+                : HasAny(tokens, "9bang", "ninebang", "nine", "bang") ? "4"
+                : HasAny(tokens, "chem", "chemlight", "light") ? "5"
+                : HasAny(tokens, "shield") ? "6"
+                : "5";
+
+            return new CommandPlan(
+                "GroundDeploy",
+                "GroundCommandMenu",
+                [
+                    new CommandStep("5", "Deploy", "GroundDeploySubmenu"),
+                    new CommandStep(deployKey, "Equipment")
+                ]);
+        }
+
+        if (HasAny(tokens, "cover"))
+        {
+            return new CommandPlan(
+                "GroundCover",
+                "GroundCommandMenu",
+                [new CommandStep("3", "Cover")]);
+        }
+
+        if (HasAny(tokens, "hold"))
+        {
+            return new CommandPlan(
+                "GroundHold",
+                "GroundCommandMenu",
+                [new CommandStep("4", "Hold")]);
+        }
+
+        if (HasPhrase(normalized, "stop focus") || HasAny(tokens, "unfocus"))
+        {
+            return new CommandPlan(
+                "IndividualSwatUnfocus",
+                "IndividualSwatCommandMenu",
+                [
+                    new CommandStep("2", "Focus", "IndividualSwatFocusSubmenu"),
+                    new CommandStep("5", "Unfocus")
+                ]);
         }
 
         if (HasPhrase(normalized, "move to") || HasAny(tokens, "move", "moving", "go") && (tokens.Length == 1 || HasAny(tokens, "there", "here")))
@@ -147,7 +231,7 @@ public sealed class VoiceCommandParser
             return "Blue";
         }
 
-        if (HasAny(tokens, "gold", "golden"))
+        if (HasAny(tokens, "gold", "golden", "all", "everyone", "everybody"))
         {
             return "Gold";
         }
@@ -198,6 +282,15 @@ public sealed class VoiceCommandParser
             : HasAny(tokens, "launcher", "launch", "grenade") ? "6"
             : HasAny(tokens, "leader", "lead") ? "7"
             : "1";
+    }
+
+    private static bool HasClearMethod(string[] tokens)
+    {
+        return HasAny(
+            tokens,
+            "flash", "flashbang", "stinger", "sting", "cs", "gas", "tear",
+            "9bang", "ninebang", "nine", "bang", "launcher", "launch", "grenade",
+            "leader", "lead");
     }
 
     private static bool HasAny(IEnumerable<string> tokens, params string[] options)

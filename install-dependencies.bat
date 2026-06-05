@@ -2,33 +2,23 @@
 setlocal
 cd /d "%~dp0"
 
-where python >nul 2>nul
+where dotnet >nul 2>nul
 if errorlevel 1 (
-  echo Python was not found on PATH.
-  echo Install Python 3.10+ from https://www.python.org/downloads/ and enable "Add python.exe to PATH".
+  echo .NET SDK was not found on PATH.
+  echo Install the .NET 10 SDK, then run this installer again.
   exit /b 1
 )
 
-if not exist ".venv\Scripts\python.exe" (
-  echo Creating local Python virtual environment...
-  python -m venv .venv
-  if errorlevel 1 exit /b 1
-)
-
-echo Upgrading pip...
-".venv\Scripts\python.exe" -m pip install --upgrade pip
+echo Restoring .NET and local Vosk dependencies...
+dotnet restore VoiceReady.slnx
 if errorlevel 1 exit /b 1
 
-echo Installing faster-whisper dependencies...
-".venv\Scripts\python.exe" -m pip install -r tools\faster-whisper\requirements.txt
-if errorlevel 1 exit /b 1
-
-if not exist "tools\faster-whisper\models\base.en\model.bin" (
-  echo Downloading faster-whisper base.en model...
-  ".venv\Scripts\python.exe" tools\faster-whisper\download_model.py --repo-id Systran/faster-whisper-base.en --output tools\faster-whisper\models\base.en
+if not exist "tools\vosk\models\vosk-model-small-en-us-0.15\conf\model.conf" (
+  echo Downloading the local Vosk English model...
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\vosk\download-model.ps1
   if errorlevel 1 exit /b 1
 ) else (
-  echo faster-whisper base.en model already exists.
+  echo Local Vosk model already exists.
 )
 
 echo.

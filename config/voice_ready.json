@@ -10,13 +10,24 @@
     "trailingSilenceMilliseconds": 550,
     "maximumSegmentMilliseconds": 7000
   },
-  "transcription": {
-    "pythonExe": "python",
-    "workerScript": "tools/faster-whisper/transcribe.py",
-    "modelPath": "tools/faster-whisper/models/base.en",
-    "language": "en",
-    "device": "cpu",
-    "computeType": "int8"
+  "vosk": {
+    "modelPath": "tools/vosk/models/vosk-model-small-en-us-0.15",
+    "maximumAlternatives": 0,
+    "includeUnknownWords": true,
+    "additionalGrammarPhrases": [
+      "use c two and clear",
+      "use c four and clear",
+      "use explosives and clear",
+      "blow the door and clear",
+      "breach the door",
+      "breach and clear",
+      "kick and clear",
+      "shotgun and clear",
+      "ram and clear",
+      "pick the lock",
+      "disarm the trap",
+      "remove the trap"
+    ]
   },
   "input": {
     "commandMenuOpen": {

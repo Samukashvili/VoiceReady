@@ -7,7 +7,7 @@ public sealed class VoiceReadySettings
 {
     public AudioSettings Audio { get; init; } = new();
 
-    public TranscriptionSettings Transcription { get; init; } = new();
+    public VoskSettings Vosk { get; init; } = new();
 
     public InputSettings Input { get; init; } = new();
 }
@@ -33,19 +33,15 @@ public sealed class AudioSettings
     public int MaximumSegmentMilliseconds { get; init; } = 7000;
 }
 
-public sealed class TranscriptionSettings
+public sealed class VoskSettings
 {
-    public string PythonExe { get; init; } = "python";
+    public string ModelPath { get; init; } = "tools/vosk/models/vosk-model-small-en-us-0.15";
 
-    public string WorkerScript { get; init; } = "tools/faster-whisper/transcribe.py";
+    public int MaximumAlternatives { get; init; }
 
-    public string ModelPath { get; init; } = "tools/faster-whisper/models/base.en";
+    public bool IncludeUnknownWords { get; init; } = true;
 
-    public string Language { get; init; } = "en";
-
-    public string Device { get; init; } = "cpu";
-
-    public string ComputeType { get; init; } = "int8";
+    public List<string> AdditionalGrammarPhrases { get; init; } = [];
 }
 
 public sealed class InputSettings

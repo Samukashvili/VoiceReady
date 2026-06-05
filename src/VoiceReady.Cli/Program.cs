@@ -173,13 +173,12 @@ static async Task RunVoiceLoopAsync(
     CommandPlanExecutor executor,
     CancellationToken cancellationToken)
 {
-    var transcriber = new FasterWhisperTranscriber(settings.Transcription, repoRoot);
+    using var transcriber = new VoskTranscriber(settings.Vosk, repoRoot, settings.Audio.SampleRate);
     using var audioSource = new WaveInAudioSource(settings.Audio);
     var segmenter = new SpeechSegmenter(settings.Audio);
-    var segmentDirectory = Path.Combine(Path.GetTempPath(), "VoiceReady", "speech");
 
     audioSource.Start();
-    Console.WriteLine("Microphone capture started.");
+    Console.WriteLine("Microphone capture and local Vosk recognition started.");
 
     while (!cancellationToken.IsCancellationRequested)
     {
@@ -191,12 +190,9 @@ static async Task RunVoiceLoopAsync(
                 continue;
             }
 
-            var wavPath = Path.Combine(segmentDirectory, $"speech-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}.wav");
-            WavFileWriter.Write(wavPath, segment);
-
             try
             {
-                var result = await transcriber.TranscribeAsync(wavPath, cancellationToken);
+                var result = transcriber.Transcribe(segment);
                 if (result is null)
                 {
                     continue;
@@ -217,25 +213,9 @@ static async Task RunVoiceLoopAsync(
             {
                 Console.WriteLine($"{DateTimeOffset.Now:HH:mm:ss.fff} voice result=error {ex.Message}");
             }
-            finally
-            {
-                TryDelete(wavPath);
-            }
         }
 
         await Task.Delay(10, cancellationToken);
-    }
-}
-
-static void TryDelete(string path)
-{
-    try
-    {
-        File.Delete(path);
-    }
-    catch
-    {
-        // Temporary speech snippets are best-effort cleanup.
     }
 }
 

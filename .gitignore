@@ -4,3 +4,4 @@ obj/
 .idea/
 *.user
 *.suo
+tools/vosk/models/

@@ -41,7 +41,7 @@ For first-time setup from source, run:
 install-dependencies.bat
 ```
 
-Voice mode captures microphone audio, segments speech locally using an RMS/decibel threshold, sends completed snippets to the local faster-whisper worker, parses recognized command phrases, and executes state-gated key sequences.
+Voice mode captures microphone audio, segments speech locally using an RMS/decibel threshold, recognizes completed speech segments in-process with a fully local Vosk model, parses recognized command phrases, and executes state-gated key sequences.
 
 Commands may target a team by including `red team`, `blue team`, or `gold team`, for example:
 
@@ -53,23 +53,22 @@ gold team fall in
 
 Saying only a team name selects that team and closes the command menu. Team selection is performed with mouse-wheel input only while a command menu is open, and the result is verified using the voted `teamSelection` pointers before command keys are sent.
 
-The faster-whisper worker is configured in `config/voice_ready.json`. The default expected layout is:
+Vosk is configured in `config/voice_ready.json`. The default expected model layout is:
 
 ```text
-tools/faster-whisper/
-  transcribe.py
-  requirements.txt
-  models/base.en/
+tools/vosk/
+  download-model.ps1
+  models/vosk-model-small-en-us-0.15/
 ```
 
-The installer creates a local `.venv`, installs Python dependencies, and downloads the default `Systran/faster-whisper-base.en` model into the repo. Manual equivalent:
+The installer restores the Vosk C# package and downloads the lightweight English model into the repo. Recognition is local at runtime and does not call a remote transcription API.
 
 ```powershell
-python -m pip install -r tools\faster-whisper\requirements.txt
-python tools\faster-whisper\download_model.py
+dotnet restore VoiceReady.slnx
+powershell -ExecutionPolicy Bypass -File tools\vosk\download-model.ps1
 ```
 
-Then place a CTranslate2 faster-whisper model at `tools/faster-whisper/models/base.en`, or update `modelPath`.
+The runtime grammar is generated from command phrases, team prefixes, equipment names, alternate phrasings, and entries in `vosk.additionalGrammarPhrases`. Add unusual phrases there without changing code.
 
 Known menu-state values currently include gameplay/no menu, escape menu, blank menu, interaction prompt, and the first door command/submenu states.
 
