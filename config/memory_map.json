@@ -314,5 +314,177 @@
         "offsets": ["118", "3E0", "78", "8", "68", "1B4"]
       }
     ]
+  },
+  "teamSelection": {
+    "moduleName": "ReadyOrNotSteam-Win64-Shipping.exe",
+    "offsetOrder": "Listed",
+    "knownSelections": [
+      {
+        "name": "NpcContext",
+        "value": 0
+      },
+      {
+        "name": "Red",
+        "value": 1,
+        "aliases": ["RedTeam"]
+      },
+      {
+        "name": "Blue",
+        "value": 2,
+        "aliases": ["BlueTeam"]
+      },
+      {
+        "name": "Gold",
+        "value": 5,
+        "aliases": ["GoldTeam", "AllTeams"]
+      }
+    ],
+    "pointers": [
+      {
+        "name": "teamSelection.08B1DB18.60.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["60", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.C0.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["C0", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.A0.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["A0", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.110.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["110", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.90.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["90", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.D0.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["D0", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.B0.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["B0", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.70.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["70", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.80.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["80", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.100.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["100", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.F0.20.20",
+        "baseOffset": "08B1DB18",
+        "offsets": ["F0", "20", "20", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.60.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["60", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.C0.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["C0", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.A0.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["A0", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.110.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["110", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.90.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["90", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.D0.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["D0", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.B0.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["B0", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.70.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["70", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.80.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["80", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.100.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["100", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08B1DB18.F0.20.98",
+        "baseOffset": "08B1DB18",
+        "offsets": ["F0", "20", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08D8A430.1A0.338.98",
+        "baseOffset": "08D8A430",
+        "offsets": ["1A0", "338", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08D8A430.310.338.98",
+        "baseOffset": "08D8A430",
+        "offsets": ["310", "338", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08E33888.2C0.3B0.98",
+        "baseOffset": "08E33888",
+        "offsets": ["2C0", "3B0", "98", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08A53398.180.60.608",
+        "baseOffset": "08A53398",
+        "offsets": ["180", "60", "608", "10", "298", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08A50740.28.120.608",
+        "baseOffset": "08A50740",
+        "offsets": ["28", "120", "608", "10", "298", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08A26400.8.2E8.310",
+        "baseOffset": "08A26400",
+        "offsets": ["8", "2E8", "310", "F00", "FD8", "770", "328"]
+      },
+      {
+        "name": "teamSelection.08A26400.20.6D8.310",
+        "baseOffset": "08A26400",
+        "offsets": ["20", "6D8", "310", "F00", "FD8", "770", "328"]
+      }
+    ]
   }
 }

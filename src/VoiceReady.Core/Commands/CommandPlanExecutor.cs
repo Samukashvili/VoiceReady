@@ -9,26 +9,40 @@ public sealed class CommandPlanExecutor
     private const string ClosedStateName = "GameplayNoMenu";
 
     private readonly MenuStateReader _menuStateReader;
+    private readonly MenuStateReader _teamSelectionReader;
     private readonly IReadOnlyDictionary<string, int> _stateValuesByName;
+    private readonly IReadOnlyDictionary<string, int> _teamValuesByName;
     private readonly KeyboardInput _keyboardInput;
     private readonly InputSettings _settings;
 
     public CommandPlanExecutor(
         MenuStateReader menuStateReader,
         IEnumerable<KnownMenuState> knownStates,
+        MenuStateReader teamSelectionReader,
+        IEnumerable<KnownTeamSelection> knownTeamSelections,
         KeyboardInput keyboardInput,
         InputSettings settings)
     {
         _menuStateReader = menuStateReader;
+        _teamSelectionReader = teamSelectionReader;
         _keyboardInput = keyboardInput;
         _settings = settings;
         _stateValuesByName = knownStates
             .SelectMany(state => new[] { state.Name }.Concat(state.Aliases).Select(name => new KeyValuePair<string, int>(name, state.Value)))
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+        _teamValuesByName = knownTeamSelections
+            .SelectMany(selection => new[] { selection.Name }.Concat(selection.Aliases)
+                .Select(name => new KeyValuePair<string, int>(name, selection.Value)))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     public bool TryExecute(CommandPlan plan, out string message)
     {
+        if (plan.Steps.Count == 0 && !string.IsNullOrWhiteSpace(plan.TeamSelection))
+        {
+            return TrySelectTeamOnly(plan.TeamSelection, out message);
+        }
+
         if (!_stateValuesByName.TryGetValue(plan.RequiredInitialState, out var requiredStateValue))
         {
             message = $"Unknown required state: {plan.RequiredInitialState}.";
@@ -69,6 +83,13 @@ public sealed class CommandPlanExecutor
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(plan.TeamSelection) && !TrySelectTeam(plan.TeamSelection, out var teamMessage))
+        {
+            CloseIfOpen();
+            message = teamMessage;
+            return false;
+        }
+
         foreach (var step in plan.Steps)
         {
             TapNumberKey(step.Key);
@@ -96,6 +117,64 @@ public sealed class CommandPlanExecutor
 
         message = $"Executed {plan.Name}.";
         return true;
+    }
+
+    private bool TrySelectTeamOnly(string teamSelection, out string message)
+    {
+        var snapshot = _menuStateReader.Read();
+        if (!snapshot.IsReliable || !IsClosed(snapshot))
+        {
+            message = "Team-only selection requires gameplay with no menu open.";
+            return false;
+        }
+
+        TapCommandMenuOpen();
+        if (!WaitForOpenMenu())
+        {
+            CloseIfOpen();
+            message = "Could not open a command menu for team selection.";
+            return false;
+        }
+
+        var selected = TrySelectTeam(teamSelection, out message);
+        CloseIfOpen();
+        return selected;
+    }
+
+    private bool TrySelectTeam(string teamSelection, out string message)
+    {
+        if (!_teamValuesByName.TryGetValue(teamSelection, out var expectedValue))
+        {
+            message = $"Unknown team selection: {teamSelection}.";
+            return false;
+        }
+
+        var snapshot = _teamSelectionReader.Read();
+        if (!snapshot.IsReliable)
+        {
+            message = "Team selection state is not reliable enough to execute.";
+            return false;
+        }
+
+        if (snapshot.VotedValue == expectedValue)
+        {
+            message = $"{teamSelection} team is already selected.";
+            return true;
+        }
+
+        for (var attempt = 0; attempt < _settings.TeamSelectionMaximumScrolls; attempt++)
+        {
+            _keyboardInput.ScrollWheel(_settings.TeamSelectionWheelDelta);
+
+            if (WaitForTeamSelection(expectedValue))
+            {
+                message = $"Selected {teamSelection} team.";
+                return true;
+            }
+        }
+
+        message = $"Could not select {teamSelection} team.";
+        return false;
     }
 
     private bool IsClosed(MenuStateSnapshot snapshot)
@@ -157,6 +236,41 @@ public sealed class CommandPlanExecutor
         }
 
         matchedState = 0;
+        return false;
+    }
+
+    private bool WaitForOpenMenu()
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMilliseconds(_settings.StateTransitionTimeoutMilliseconds);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var snapshot = _menuStateReader.Read();
+            if (snapshot.IsReliable && !IsClosed(snapshot))
+            {
+                return true;
+            }
+
+            Thread.Sleep(25);
+        }
+
+        return false;
+    }
+
+    private bool WaitForTeamSelection(int expectedValue)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMilliseconds(
+            Math.Min(_settings.StateTransitionTimeoutMilliseconds, 250));
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var snapshot = _teamSelectionReader.Read();
+            if (snapshot.IsReliable && snapshot.VotedValue == expectedValue)
+            {
+                return true;
+            }
+
+            Thread.Sleep(25);
+        }
+
         return false;
     }
 

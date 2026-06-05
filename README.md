@@ -43,6 +43,16 @@ install-dependencies.bat
 
 Voice mode captures microphone audio, segments speech locally using an RMS/decibel threshold, sends completed snippets to the local faster-whisper worker, parses recognized command phrases, and executes state-gated key sequences.
 
+Commands may target a team by including `red team`, `blue team`, or `gold team`, for example:
+
+```text
+red team breach using c2 and clear with flashbang
+blue team search and secure
+gold team fall in
+```
+
+Saying only a team name selects that team and closes the command menu. Team selection is performed with mouse-wheel input only while a command menu is open, and the result is verified using the voted `teamSelection` pointers before command keys are sent.
+
 The faster-whisper worker is configured in `config/voice_ready.json`. The default expected layout is:
 
 ```text
@@ -62,6 +72,8 @@ python tools\faster-whisper\download_model.py
 Then place a CTranslate2 faster-whisper model at `tools/faster-whisper/models/base.en`, or update `modelPath`.
 
 Known menu-state values currently include gameplay/no menu, escape menu, blank menu, interaction prompt, and the first door command/submenu states.
+
+Known team-selection values are `0` for an NPC command context, `1` for Red, `2` for Blue, and `5` for Gold. Values `3` and `4` remain intentionally unmapped until observed.
 
 ## Mapping Values
 

@@ -5,4 +5,5 @@ public sealed record CommandPlan(
     string RequiredInitialState,
     IReadOnlyList<CommandStep> Steps,
     bool CanOpenMenuFromClosed = true,
-    IReadOnlyList<string>? AlternativeInitialStates = null);
+    IReadOnlyList<string>? AlternativeInitialStates = null,
+    string? TeamSelection = null);

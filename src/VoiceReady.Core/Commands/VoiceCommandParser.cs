@@ -17,7 +17,21 @@ public sealed class VoiceCommandParser
     {
         var normalized = Normalize(text);
         var tokens = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var teamSelection = ParseTeamSelection(tokens);
+        var plan = ParseCommand(normalized, tokens);
 
+        if (plan is not null)
+        {
+            return plan with { TeamSelection = teamSelection };
+        }
+
+        return teamSelection is null
+            ? null
+            : new CommandPlan($"Select{teamSelection}Team", string.Empty, [], TeamSelection: teamSelection);
+    }
+
+    private static CommandPlan? ParseCommand(string normalized, string[] tokens)
+    {
         if (HasAny(tokens, "breach", "reach", "bridge", "breech", "break", "broke") ||
             HasAny(tokens, "kick", "kicking") && HasAny(tokens, "door", "clear"))
         {
@@ -116,6 +130,26 @@ public sealed class VoiceCommandParser
                     new CommandStep("2", "FallIn", "GroundFallInSubmenu"),
                     new CommandStep(formationKey, "Formation")
                 ]);
+        }
+
+        return null;
+    }
+
+    private static string? ParseTeamSelection(string[] tokens)
+    {
+        if (HasAny(tokens, "red", "read"))
+        {
+            return "Red";
+        }
+
+        if (HasAny(tokens, "blue", "blew"))
+        {
+            return "Blue";
+        }
+
+        if (HasAny(tokens, "gold", "golden"))
+        {
+            return "Gold";
         }
 
         return null;

@@ -10,6 +10,8 @@ public sealed class MemoryMap
     public PointerOffsetOrder OffsetOrder { get; init; } = PointerOffsetOrder.CheatEnginePointerScanner;
 
     public MenuStateMap MenuState { get; init; } = new();
+
+    public TeamSelectionMap TeamSelection { get; init; } = new();
 }
 
 public sealed class MenuStateMap
@@ -47,6 +49,36 @@ public sealed class MenuPointerMap
 }
 
 public sealed class KnownMenuState
+{
+    public string Name { get; init; } = string.Empty;
+
+    public int Value { get; init; }
+
+    public List<string> Aliases { get; init; } = [];
+}
+
+public sealed class TeamSelectionMap
+{
+    public string ModuleName { get; init; } = "ReadyOrNotSteam-Win64-Shipping.exe";
+
+    public PointerOffsetOrder OffsetOrder { get; init; } = PointerOffsetOrder.CheatEnginePointerScanner;
+
+    public List<MenuPointerMap> Pointers { get; init; } = [];
+
+    public List<KnownTeamSelection> KnownSelections { get; init; } = [];
+
+    [JsonIgnore]
+    public IReadOnlyList<PointerPath> PointerPaths => Pointers
+        .Select((pointer, index) => PointerPath.FromHex(
+            string.IsNullOrWhiteSpace(pointer.Name) ? $"teamSelection.{index + 1}" : pointer.Name,
+            string.IsNullOrWhiteSpace(pointer.ModuleName) ? ModuleName : pointer.ModuleName,
+            pointer.BaseOffset,
+            pointer.Offsets,
+            pointer.OffsetOrder ?? OffsetOrder))
+        .ToArray();
+}
+
+public sealed class KnownTeamSelection
 {
     public string Name { get; init; } = string.Empty;
 

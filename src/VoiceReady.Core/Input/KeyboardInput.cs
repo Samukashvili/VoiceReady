@@ -11,6 +11,7 @@ public sealed class KeyboardInput
     private const uint KeyEventFScanCode = 0x0008;
     private const uint MouseEventFMiddleDown = 0x0020;
     private const uint MouseEventFMiddleUp = 0x0040;
+    private const uint MouseEventFWheel = 0x0800;
 
     public void TapScanCode(ushort scanCode, TimeSpan holdDuration)
     {
@@ -24,6 +25,11 @@ public sealed class KeyboardInput
         SendMouse(MouseEventFMiddleDown);
         Thread.Sleep(holdDuration);
         SendMouse(MouseEventFMiddleUp);
+    }
+
+    public void ScrollWheel(int delta)
+    {
+        SendMouse(MouseEventFWheel, unchecked((uint)delta));
     }
 
     private static void Send(ushort scanCode, bool keyUp)
@@ -49,7 +55,7 @@ public sealed class KeyboardInput
         }
     }
 
-    private static void SendMouse(uint flags)
+    private static void SendMouse(uint flags, uint mouseData = 0)
     {
         var input = new INPUT
         {
@@ -58,7 +64,8 @@ public sealed class KeyboardInput
             {
                 mouse = new MOUSEINPUT
                 {
-                    dwFlags = flags
+                    dwFlags = flags,
+                    mouseData = mouseData
                 }
             }
         };

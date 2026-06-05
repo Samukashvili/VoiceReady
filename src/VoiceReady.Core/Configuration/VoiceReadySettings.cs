@@ -60,6 +60,10 @@ public sealed class InputSettings
 
     public string CloseMenuScanCode { get; init; } = "01";
 
+    public int TeamSelectionWheelDelta { get; init; } = -120;
+
+    public int TeamSelectionMaximumScrolls { get; init; } = 5;
+
     public ushort CloseMenuScanCodeValue => ushort.Parse(
         CloseMenuScanCode.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? CloseMenuScanCode[2..] : CloseMenuScanCode,
         NumberStyles.HexNumber,

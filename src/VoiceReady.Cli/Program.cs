@@ -63,6 +63,7 @@ using (processReader)
     };
 
     var menuReader = new MenuStateReader(processReader, memoryMap.MenuState.PointerPaths);
+    var teamSelectionReader = new MenuStateReader(processReader, memoryMap.TeamSelection.PointerPaths);
     var knownStates = memoryMap.MenuState.KnownStates.ToDictionary(
         state => state.Value,
         state => state.Aliases.Count == 0 ? state.Name : $"{state.Name}/{string.Join("/", state.Aliases)}");
@@ -74,10 +75,17 @@ using (processReader)
     var semicolonKey = new SemicolonKeyPoller();
     var temporaryExecutor = new TemporaryDoorCommandExecutor(menuReader, keyboardInput);
     var parser = new VoiceCommandParser();
-    var planExecutor = new CommandPlanExecutor(menuReader, memoryMap.MenuState.KnownStates, keyboardInput, voiceSettings.Input);
+    var planExecutor = new CommandPlanExecutor(
+        menuReader,
+        memoryMap.MenuState.KnownStates,
+        teamSelectionReader,
+        memoryMap.TeamSelection.KnownSelections,
+        keyboardInput,
+        voiceSettings.Input);
 
     Console.WriteLine($"Attached to {processReader.ProcessName} ({processReader.ProcessId}).");
     Console.WriteLine($"Reading {memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
+    Console.WriteLine($"Reading {memoryMap.TeamSelection.PointerPaths.Count} team-selection pointer paths.");
     Console.WriteLine("Temporary test hotkey: ; executes Door -> Breach -> C2 -> Clear when DoorCommandMenu is active.");
     Console.WriteLine(voiceEnabled ? "Voice mode enabled." : "Voice mode disabled. Start with --voice to enable microphone transcription.");
     Console.WriteLine("Press Ctrl+C to stop.");
@@ -89,6 +97,7 @@ using (processReader)
     }
 
     int? lastValue = null;
+    int? lastTeamValue = null;
     var hasPrinted = false;
 
     while (!shutdown.IsCancellationRequested)
@@ -107,6 +116,7 @@ using (processReader)
         }
 
         var snapshot = menuReader.Read();
+        var teamSnapshot = teamSelectionReader.Read();
         var stateName = snapshot.VotedValue.HasValue && knownStates.TryGetValue(snapshot.VotedValue.Value, out var knownState)
             ? knownState
             : "Unmapped";
@@ -133,6 +143,16 @@ using (processReader)
 
             lastValue = snapshot.VotedValue;
             hasPrinted = true;
+        }
+
+        if (teamSnapshot.VotedValue != lastTeamValue)
+        {
+            var teamName = memoryMap.TeamSelection.KnownSelections
+                .FirstOrDefault(selection => selection.Value == teamSnapshot.VotedValue)?.Name
+                ?? "Unmapped";
+            Console.WriteLine(
+                $"{DateTimeOffset.Now:HH:mm:ss.fff} team={teamSnapshot.VotedValue?.ToString() ?? "no consensus"} ({teamName}), confidence={teamSnapshot.Confidence:P0}, reads={teamSnapshot.SuccessfulReads}, failed={teamSnapshot.FailedReads}");
+            lastTeamValue = teamSnapshot.VotedValue;
         }
 
         Thread.Sleep(15);
