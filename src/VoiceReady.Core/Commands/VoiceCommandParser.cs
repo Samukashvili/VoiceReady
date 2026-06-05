@@ -192,7 +192,66 @@ public sealed class VoiceCommandParser
                 ]);
         }
 
-        if (HasPhrase(normalized, "move to") || HasAny(tokens, "move", "moving", "go") && (tokens.Length == 1 || HasAny(tokens, "there", "here")))
+        if (HasPhrase(normalized, "my position"))
+        {
+            return new CommandPlan(
+                "CivilianSuspectMoveToMyPosition",
+                "CivilianSuspectCommandMenu",
+                [
+                    new CommandStep("2", "Move", "CivilianSuspectMoveSubmenu"),
+                    new CommandStep("2", "MyPosition", "GameplayNoMenu")
+                ],
+                StateVariants:
+                [
+                    new CommandPlanVariant(
+                        "CivilianSuspectMoveSubmenu",
+                        [new CommandStep("2", "MyPosition", "GameplayNoMenu")])
+                ]);
+        }
+
+        if (HasAny(tokens, "stop") && !HasAny(tokens, "focus"))
+        {
+            return new CommandPlan(
+                "CivilianSuspectStopMoving",
+                "CivilianSuspectCommandMenu",
+                [
+                    new CommandStep("2", "Move", "CivilianSuspectMoveSubmenu"),
+                    new CommandStep("3", "Stop", "GameplayNoMenu")
+                ],
+                StateVariants:
+                [
+                    new CommandPlanVariant(
+                        "CivilianSuspectMoveSubmenu",
+                        [new CommandStep("3", "Stop", "GameplayNoMenu")])
+                ]);
+        }
+
+        if (tokens.Length == 1 && HasAny(tokens, "here"))
+        {
+            return new CommandPlan(
+                "CivilianSuspectMoveHere",
+                "CivilianSuspectMoveSubmenu",
+                [new CommandStep("1", "Here", "GameplayNoMenu")],
+                CanOpenMenuFromClosed: false);
+        }
+
+        if (HasAny(tokens, "move", "moving") &&
+            (tokens.Length == 1 || HasAny(tokens, "here")) &&
+            !HasAny(tokens, "there"))
+        {
+            return new CommandPlan(
+                "MoveContextual",
+                "GroundCommandMenu",
+                [new CommandStep("1", "MoveTo")],
+                StateVariants:
+                [
+                    new CommandPlanVariant(
+                        "CivilianSuspectCommandMenu",
+                        [new CommandStep("2", "Move", "CivilianSuspectMoveSubmenu")])
+                ]);
+        }
+
+        if (HasPhrase(normalized, "move to") || HasAny(tokens, "move", "moving", "go") && HasAny(tokens, "there"))
         {
             return new CommandPlan(
                 "GroundMoveTo",

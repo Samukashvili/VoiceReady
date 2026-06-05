@@ -57,6 +57,14 @@ public sealed class CommandPlanExecutor
                 allowedInitialStates.Add((stateName, value));
             }
         }
+        foreach (var variant in plan.StateVariants ?? [])
+        {
+            if (_stateValuesByName.TryGetValue(variant.InitialState, out var value) &&
+                allowedInitialStates.All(state => state.Value != value))
+            {
+                allowedInitialStates.Add((variant.InitialState, value));
+            }
+        }
 
         var snapshot = _menuStateReader.Read();
         if (!snapshot.IsReliable)
@@ -82,6 +90,10 @@ public sealed class CommandPlanExecutor
             message = $"Wrong menu state. Expected {string.Join(" or ", allowedInitialStates.Select(state => state.Name))}, current value {snapshot.VotedValue}.";
             return false;
         }
+        else
+        {
+            requiredStateValue = snapshot.VotedValue!.Value;
+        }
 
         if (!string.IsNullOrWhiteSpace(plan.TeamSelection) && !TrySelectTeam(plan.TeamSelection, out var teamMessage))
         {
@@ -90,7 +102,8 @@ public sealed class CommandPlanExecutor
             return false;
         }
 
-        foreach (var step in plan.Steps)
+        var steps = ResolveSteps(plan, requiredStateValue);
+        foreach (var step in steps)
         {
             TapNumberKey(step.Key);
             Thread.Sleep(_settings.BetweenKeysMilliseconds);
@@ -117,6 +130,20 @@ public sealed class CommandPlanExecutor
 
         message = $"Executed {plan.Name}.";
         return true;
+    }
+
+    private IReadOnlyList<CommandStep> ResolveSteps(CommandPlan plan, int initialStateValue)
+    {
+        foreach (var variant in plan.StateVariants ?? [])
+        {
+            if (_stateValuesByName.TryGetValue(variant.InitialState, out var variantValue) &&
+                variantValue == initialStateValue)
+            {
+                return variant.Steps;
+            }
+        }
+
+        return plan.Steps;
     }
 
     private bool TrySelectTeamOnly(string teamSelection, out string message)
