@@ -33,7 +33,7 @@ public sealed class VoskTranscriber : IDisposable
         }
 
         ValidateModelFiles(modelPath);
-        modelPath = EnsureNativeSafeModelPath(modelPath);
+        ValidateNativeSafeModelPath(modelPath);
         Vosk.Vosk.SetLogLevel(-2);
         _model = new Model(modelPath);
         var grammarJson = JsonSerializer.Serialize(
@@ -60,69 +60,15 @@ public sealed class VoskTranscriber : IDisposable
         }
     }
 
-    private static string EnsureNativeSafeModelPath(string modelPath)
+    private static void ValidateNativeSafeModelPath(string modelPath)
     {
         if (IsAscii(modelPath))
         {
-            return modelPath;
-        }
-
-        var cacheRoot = GetAsciiWritableCacheRoot();
-        var cachePath = Path.Combine(cacheRoot, "vosk-model-small-en-us-0.15");
-        MirrorDirectory(modelPath, cachePath);
-        ValidateModelFiles(cachePath);
-        return cachePath;
-    }
-
-    private static string GetAsciiWritableCacheRoot()
-    {
-        var candidates = new[]
-        {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments), "VoiceReady", "VoskCache"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VoiceReady", "VoskCache"),
-            Path.Combine(Path.GetTempPath(), "VoiceReady", "VoskCache")
-        };
-
-        foreach (var candidate in candidates.Where(path => !string.IsNullOrWhiteSpace(path) && IsAscii(path)))
-        {
-            try
-            {
-                Directory.CreateDirectory(candidate);
-                var probe = Path.Combine(candidate, ".write-test");
-                File.WriteAllText(probe, string.Empty);
-                File.Delete(probe);
-                return candidate;
-            }
-            catch
-            {
-                // Try the next candidate.
-            }
+            return;
         }
 
         throw new InvalidOperationException(
-            "Vosk cannot load the model because VoiceReady is stored in a path with non-English characters, and no ASCII-only writable cache folder was available. Move VoiceReady to a simple path such as C:\\VoiceReady and try again.");
-    }
-
-    private static void MirrorDirectory(string sourceDirectory, string targetDirectory)
-    {
-        Directory.CreateDirectory(targetDirectory);
-        foreach (var sourcePath in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceDirectory, sourcePath);
-            var targetPath = Path.Combine(targetDirectory, relativePath);
-            var targetParent = Path.GetDirectoryName(targetPath);
-            if (!string.IsNullOrWhiteSpace(targetParent))
-            {
-                Directory.CreateDirectory(targetParent);
-            }
-
-            if (File.Exists(targetPath) && new FileInfo(targetPath).Length == new FileInfo(sourcePath).Length)
-            {
-                continue;
-            }
-
-            File.Copy(sourcePath, targetPath, overwrite: true);
-        }
+            $"Vosk cannot load the model from a path with non-English characters: {modelPath}. Move the whole VoiceReady folder to a simple path such as C:\\VoiceReady and run it again.");
     }
 
     private static bool IsAscii(string value) => value.All(character => character <= 127);

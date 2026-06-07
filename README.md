@@ -46,6 +46,14 @@ tools\vendor\vosk\
 tools\vosk\models\vosk-model-small-en-us-0.15\
 ```
 
+Extract VoiceReady to a simple English-only path such as:
+
+```text
+C:\VoiceReady
+```
+
+Avoid OneDrive folders and folder paths containing non-English characters. The native Vosk library can fail to load the model from those paths.
+
 There is no dependency installer script anymore. The only external requirement is the .NET 10 SDK. Check that .NET is available with:
 
 ```powershell
@@ -144,6 +152,12 @@ config\voice_ready_diagnostics.log
 ```
 
 That log records the last startup step before native audio or Vosk recognition code runs.
+
+If the error mentions that the Vosk model folder does not contain model files and the path contains `????`, move the whole VoiceReady folder to an English-only path such as:
+
+```text
+C:\VoiceReady
+```
 
 ### Repository ZIP size looks small
 
