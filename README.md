@@ -58,6 +58,8 @@ another formation explicitly with `double file`, `diamond formation`, or `wedge 
 
 Saying only a team name selects that team and closes the command menu. Team selection is performed with mouse-wheel input only while a command menu is open, and the result is verified using the voted `teamSelection` pointers before command keys are sent.
 
+Trap-aware door commands use the menu-state value `TrappedDoorCommandMenu`, which appears when the door command menu has inserted `DisarmTrap` at key `6`.
+
 Vosk is configured in `config/voice_ready.json`. The default expected model layout is:
 
 ```text

@@ -39,6 +39,14 @@ public sealed class VoiceCommandParser
             return ParseDoorBreach(tokens);
         }
 
+        if (HasAny(tokens, "disarm", "remove") && HasAny(tokens, "trap", "wire", "tripwire"))
+        {
+            return new CommandPlan(
+                "DoorDisarmTrap",
+                "DoorCommandMenu",
+                [new CommandStep("6", "DisarmTrap")]);
+        }
+
         if (HasAny(tokens, "remove", "unblock", "unjam") && HasAny(tokens, "wedge", "jam", "jammed", "block", "blocked", "door", "down", "time"))
         {
             return new CommandPlan(

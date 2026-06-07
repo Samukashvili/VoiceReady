@@ -332,6 +332,55 @@
       ]
     },
     {
+      "name": "TrappedDoorCommandMenu",
+      "memoryValue": 29098284,
+      "category": "CommandMenu",
+      "notes": "Door command menu after a trap has been identified. DisarmTrap is inserted at key 6, shifting WedgeDoor/Cover/OpenDoor one slot later.",
+      "commands": [
+        {
+          "key": "1",
+          "name": "StackUp",
+          "opensState": "DoorStackUpSubmenu"
+        },
+        {
+          "key": "2",
+          "name": "Open",
+          "opensState": "DoorOpenSubmenu",
+          "variantNotes": "If the door is locked, this slot is replaced by PickLock and does not open a submenu."
+        },
+        {
+          "key": "3",
+          "name": "Breach",
+          "opensState": "DoorBreachSubmenu"
+        },
+        {
+          "key": "4",
+          "name": "Scan",
+          "opensState": "DoorScanSubmenu"
+        },
+        {
+          "key": "5",
+          "name": "MirrorUnderDoor"
+        },
+        {
+          "key": "6",
+          "name": "DisarmTrap"
+        },
+        {
+          "key": "7",
+          "name": "WedgeDoor"
+        },
+        {
+          "key": "8",
+          "name": "Cover"
+        },
+        {
+          "key": "9",
+          "name": "OpenDoor"
+        }
+      ]
+    },
+    {
       "name": "DoorStackUpSubmenu",
       "memoryValue": 19202348,
       "category": "CommandSubmenu",

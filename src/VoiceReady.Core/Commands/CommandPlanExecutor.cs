@@ -7,6 +7,8 @@ namespace VoiceReady.Core.Commands;
 public sealed class CommandPlanExecutor
 {
     private const string ClosedStateName = "GameplayNoMenu";
+    private const string DoorCommandMenuStateName = "DoorCommandMenu";
+    private const string TrappedDoorCommandMenuStateName = "TrappedDoorCommandMenu";
 
     private readonly MenuStateReader _menuStateReader;
     private readonly MenuStateReader _teamSelectionReader;
@@ -50,6 +52,12 @@ public sealed class CommandPlanExecutor
         }
 
         var allowedInitialStates = new List<(string Name, int Value)> { (plan.RequiredInitialState, requiredStateValue) };
+        if (plan.RequiredInitialState.Equals(DoorCommandMenuStateName, StringComparison.OrdinalIgnoreCase) &&
+            _stateValuesByName.TryGetValue(TrappedDoorCommandMenuStateName, out var trappedDoorValue))
+        {
+            allowedInitialStates.Add((TrappedDoorCommandMenuStateName, trappedDoorValue));
+        }
+
         foreach (var stateName in plan.AlternativeInitialStates ?? [])
         {
             if (_stateValuesByName.TryGetValue(stateName, out var value))
@@ -103,9 +111,17 @@ public sealed class CommandPlanExecutor
         }
 
         var steps = ResolveSteps(plan, requiredStateValue);
+        var isTrappedDoorCommandMenu = IsState(requiredStateValue, TrappedDoorCommandMenuStateName);
         foreach (var step in steps)
         {
-            TapNumberKey(step.Key);
+            if (step.Name.Equals("DisarmTrap", StringComparison.OrdinalIgnoreCase) && !isTrappedDoorCommandMenu)
+            {
+                CloseIfOpen();
+                message = "Current door menu does not indicate an identified trap.";
+                return false;
+            }
+
+            TapNumberKey(ResolveTrapAwareKey(step, isTrappedDoorCommandMenu));
             Thread.Sleep(_settings.BetweenKeysMilliseconds);
 
             if (string.IsNullOrWhiteSpace(step.ExpectedStateAfter))
@@ -144,6 +160,27 @@ public sealed class CommandPlanExecutor
         }
 
         return plan.Steps;
+    }
+
+    private string ResolveTrapAwareKey(CommandStep step, bool isTrappedDoorCommandMenu)
+    {
+        if (!isTrappedDoorCommandMenu)
+        {
+            return step.Key;
+        }
+
+        return step.Name switch
+        {
+            "WedgeDoor" => "7",
+            "RemoveWedge" => "7",
+            "OpenOrCloseDoor" => "9",
+            _ => step.Key
+        };
+    }
+
+    private bool IsState(int stateValue, string stateName)
+    {
+        return _stateValuesByName.TryGetValue(stateName, out var expectedValue) && stateValue == expectedValue;
     }
 
     private bool TrySelectTeamOnly(string teamSelection, out string message)
