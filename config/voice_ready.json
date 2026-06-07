@@ -31,7 +31,61 @@
   },
   "input": {
     "commandMenuOpen": {
-      "kind": "MouseMiddle"
+      "kind": "MouseMiddle",
+      "scanCode": "",
+      "displayName": "Middle Mouse"
+    },
+    "commandKeys": {
+      "1": {
+        "kind": "Keyboard",
+        "scanCode": "02",
+        "displayName": "1"
+      },
+      "2": {
+        "kind": "Keyboard",
+        "scanCode": "03",
+        "displayName": "2"
+      },
+      "3": {
+        "kind": "Keyboard",
+        "scanCode": "04",
+        "displayName": "3"
+      },
+      "4": {
+        "kind": "Keyboard",
+        "scanCode": "05",
+        "displayName": "4"
+      },
+      "5": {
+        "kind": "Keyboard",
+        "scanCode": "06",
+        "displayName": "5"
+      },
+      "6": {
+        "kind": "Keyboard",
+        "scanCode": "07",
+        "displayName": "6"
+      },
+      "7": {
+        "kind": "Keyboard",
+        "scanCode": "08",
+        "displayName": "7"
+      },
+      "8": {
+        "kind": "Keyboard",
+        "scanCode": "09",
+        "displayName": "8"
+      },
+      "9": {
+        "kind": "Keyboard",
+        "scanCode": "0A",
+        "displayName": "9"
+      },
+      "0": {
+        "kind": "Keyboard",
+        "scanCode": "0B",
+        "displayName": "0"
+      }
     },
     "keyHoldMilliseconds": 35,
     "betweenKeysMilliseconds": 80,

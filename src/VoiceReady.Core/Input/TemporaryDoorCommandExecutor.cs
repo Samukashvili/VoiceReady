@@ -1,4 +1,5 @@
 using VoiceReady.Core.Detection;
+using VoiceReady.Core.Configuration;
 
 namespace VoiceReady.Core.Input;
 
@@ -14,11 +15,13 @@ public sealed class TemporaryDoorCommandExecutor
 
     private readonly MenuStateReader _menuStateReader;
     private readonly KeyboardInput _keyboardInput;
+    private readonly InputSettings _settings;
 
-    public TemporaryDoorCommandExecutor(MenuStateReader menuStateReader, KeyboardInput keyboardInput)
+    public TemporaryDoorCommandExecutor(MenuStateReader menuStateReader, KeyboardInput keyboardInput, InputSettings settings)
     {
         _menuStateReader = menuStateReader;
         _keyboardInput = keyboardInput;
+        _settings = settings;
     }
 
     public bool TryExecuteBreachC2Clear(out string message)
@@ -30,23 +33,28 @@ public sealed class TemporaryDoorCommandExecutor
             return false;
         }
 
-        _keyboardInput.TapScanCode(NumberRowScanCodes.Three, KeyHoldDuration);
+        TapCommandKey("3");
         if (!WaitForState(DoorBreachSubmenuValue))
         {
             message = "Pressed Breach, but DoorBreachSubmenu was not detected.";
             return false;
         }
 
-        _keyboardInput.TapScanCode(NumberRowScanCodes.Three, KeyHoldDuration);
+        TapCommandKey("3");
         if (!WaitForState(DoorOpenSubmenuValue))
         {
             message = "Pressed C2, but DoorOpenSubmenu was not detected.";
             return false;
         }
 
-        _keyboardInput.TapScanCode(NumberRowScanCodes.One, KeyHoldDuration);
+        TapCommandKey("1");
         message = "Executed test command: Breach -> C2 -> Clear.";
         return true;
+    }
+
+    private void TapCommandKey(string key)
+    {
+        _keyboardInput.TapInput(_settings.GetCommandKey(key), KeyHoldDuration);
     }
 
     private bool WaitForState(int expectedValue)

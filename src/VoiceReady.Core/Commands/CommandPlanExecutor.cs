@@ -295,13 +295,7 @@ public sealed class CommandPlanExecutor
 
     private void TapCommandMenuOpen()
     {
-        if (_settings.CommandMenuOpen.Kind.Equals("MouseMiddle", StringComparison.OrdinalIgnoreCase))
-        {
-            _keyboardInput.TapMiddleMouse(TimeSpan.FromMilliseconds(_settings.KeyHoldMilliseconds));
-            return;
-        }
-
-        throw new NotSupportedException($"Unsupported command menu open input: {_settings.CommandMenuOpen.Kind}");
+        _keyboardInput.TapInput(_settings.CommandMenuOpen, TimeSpan.FromMilliseconds(_settings.KeyHoldMilliseconds));
     }
 
     private void CloseIfOpen()
@@ -387,21 +381,6 @@ public sealed class CommandPlanExecutor
 
     private void TapNumberKey(string key)
     {
-        var scanCode = key switch
-        {
-            "1" => NumberRowScanCodes.One,
-            "2" => NumberRowScanCodes.Two,
-            "3" => NumberRowScanCodes.Three,
-            "4" => NumberRowScanCodes.Four,
-            "5" => NumberRowScanCodes.Five,
-            "6" => NumberRowScanCodes.Six,
-            "7" => NumberRowScanCodes.Seven,
-            "8" => NumberRowScanCodes.Eight,
-            "9" => NumberRowScanCodes.Nine,
-            "0" => NumberRowScanCodes.Zero,
-            _ => throw new NotSupportedException($"Unsupported command key: {key}")
-        };
-
-        _keyboardInput.TapScanCode(scanCode, TimeSpan.FromMilliseconds(_settings.KeyHoldMilliseconds));
+        _keyboardInput.TapInput(_settings.GetCommandKey(key), TimeSpan.FromMilliseconds(_settings.KeyHoldMilliseconds));
     }
 }

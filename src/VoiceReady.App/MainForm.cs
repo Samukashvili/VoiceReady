@@ -5,6 +5,8 @@ using VoiceReady.Core.Detection;
 using VoiceReady.Core.Input;
 using VoiceReady.Core.Memory;
 using VoiceReady.Core.Transcription;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 
 namespace VoiceReady.App;
 
@@ -12,13 +14,16 @@ public sealed class MainForm : Form
 {
     private readonly ComboBox _microphoneCombo = new();
     private readonly CheckBox _automaticThresholdCheck = new();
-    private readonly TrackBar _startThresholdSlider = new();
+    private readonly DarkSlider _startThresholdSlider = new();
     private readonly Label _startThresholdValueLabel = new();
     private readonly Label _endThresholdValueLabel = new();
-    private readonly NumericUpDown _minimumSpeechInput = new();
-    private readonly NumericUpDown _trailingSilenceInput = new();
+    private readonly DarkNumberInput _minimumSpeechInput = new();
+    private readonly DarkNumberInput _trailingSilenceInput = new();
     private readonly Button _startStopButton = new();
     private readonly Button _refreshDevicesButton = new();
+    private readonly Button _microphoneTestButton = new();
+    private readonly ProgressBar _microphoneTestLevelMeter = new();
+    private readonly Label _microphoneTestLabel = new();
     private readonly CheckBox _debugCheck = new();
     private readonly RichTextBox _debugLog = new();
     private readonly ProgressBar _levelMeter = new();
@@ -28,30 +33,55 @@ public sealed class MainForm : Form
     private readonly Label _speechLabel = new();
     private readonly Label _voiceResultLabel = new();
     private readonly System.Windows.Forms.Timer _stateTimer = new();
+    private readonly Dictionary<string, KeybindRow> _keybindRows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Button> _navButtons = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Button _resetAllKeybindsButton = new();
+    private readonly Panel _contentHost = new();
 
     private RuntimeContext? _runtime;
     private CancellationTokenSource? _shutdown;
+    private CancellationTokenSource? _microphoneTestShutdown;
+    private Task? _microphoneTestTask;
     private VoiceReadySettings _baseSettings = new();
     private MemoryMap? _memoryMap;
     private CommandMenuMap? _commandMenuMap;
     private string _repoRoot = string.Empty;
     private string _configDir = string.Empty;
+    private string _voiceSettingsPath = string.Empty;
+    private string? _pendingKeybindId;
     private int? _lastMenuValue;
     private int? _lastTeamValue;
     private bool _hasLoggedRoots;
+    private string _activePage = "dashboard";
+    private string _lastMicrophoneTestTranscript = "none";
+
+    private static readonly Color AppBackground = Color.FromArgb(10, 10, 11);
+    private static readonly Color SidebarBackground = Color.FromArgb(15, 15, 17);
+    private static readonly Color PanelBackground = Color.FromArgb(24, 24, 27);
+    private static readonly Color PanelBackgroundAlt = Color.FromArgb(34, 34, 38);
+    private static readonly Color BorderColor = Color.FromArgb(62, 62, 68);
+    private static readonly Color TextPrimary = Color.FromArgb(238, 238, 239);
+    private static readonly Color TextSecondary = Color.FromArgb(164, 164, 170);
+    private static readonly Color Accent = Color.FromArgb(212, 212, 216);
+    private static readonly Color AccentMuted = Color.FromArgb(45, 45, 50);
+    private static readonly Color Danger = Color.FromArgb(239, 100, 97);
+    private static readonly Color Success = Color.FromArgb(87, 201, 140);
+    private static readonly Color Warning = Color.FromArgb(232, 172, 85);
 
     public MainForm()
     {
         Text = "VoiceReady";
         MinimumSize = new Size(920, 680);
-        Size = new Size(1040, 740);
+        Size = new Size(1120, 760);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
-        BackColor = Color.FromArgb(245, 247, 250);
+        BackColor = AppBackground;
+        KeyPreview = true;
 
         BuildLayout();
         Load += OnLoad;
         FormClosing += OnFormClosing;
+        KeyDown += OnKeybindKeyDown;
 
         _stateTimer.Interval = 50;
         _stateTimer.Tick += (_, _) => RefreshRuntimeState();
@@ -59,194 +89,402 @@ public sealed class MainForm : Form
 
     private void BuildLayout()
     {
-        var root = new TableLayoutPanel
+        var shell = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = AppBackground
+        };
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 238));
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        Controls.Add(shell);
+
+        shell.Controls.Add(BuildSidebar(), 0, 0);
+
+        _contentHost.Dock = DockStyle.Fill;
+        _contentHost.BackColor = AppBackground;
+        _contentHost.Padding = new Padding(24);
+        shell.Controls.Add(_contentHost, 1, 0);
+
+        ShowPage("dashboard");
+    }
+
+    private Control BuildSidebar()
+    {
+        var sidebar = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
-            Padding = new Padding(18),
-            BackColor = BackColor
+            RowCount = 3,
+            BackColor = SidebarBackground,
+            Padding = new Padding(18, 22, 18, 18)
         };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 170));
-        Controls.Add(root);
+        sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var title = new Label
+        var brand = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 1,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 28)
+        };
+        brand.Controls.Add(new Label
         {
             Text = "VoiceReady",
             AutoSize = true,
             Font = new Font(Font.FontFamily, 22, FontStyle.Bold),
-            ForeColor = Color.FromArgb(24, 31, 42),
+            ForeColor = TextPrimary,
             Margin = new Padding(0, 0, 0, 4)
-        };
-        root.Controls.Add(title, 0, 0);
-
-        var subtitle = new Label
+        });
+        brand.Controls.Add(new Label
         {
-            Text = "Ready or Not voice command assistant",
+            Text = "Ready or Not command console",
             AutoSize = true,
-            ForeColor = Color.FromArgb(81, 91, 107),
-            Margin = new Padding(1, 0, 0, 18)
-        };
-        root.Controls.Add(subtitle, 0, 1);
+            ForeColor = TextSecondary,
+            Margin = new Padding(1, 0, 0, 0)
+        });
+        sidebar.Controls.Add(brand, 0, 0);
 
-        var mainGrid = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1
-        };
-        mainGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
-        mainGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
-        root.Controls.Add(mainGrid, 0, 2);
-
-        mainGrid.Controls.Add(BuildSetupPanel(), 0, 0);
-        mainGrid.Controls.Add(BuildStatusPanel(), 1, 0);
-
-        var debugPanel = new TableLayoutPanel
+        var nav = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
-            Margin = new Padding(0, 14, 0, 0)
+            RowCount = 4
         };
-        debugPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        debugPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.Controls.Add(debugPanel, 0, 3);
+        nav.Controls.Add(CreateNavButton("dashboard", "Dashboard"));
+        nav.Controls.Add(CreateNavButton("audio", "Audio"));
+        nav.Controls.Add(CreateNavButton("keybinds", "Keybinds"));
+        nav.Controls.Add(CreateNavButton("debug", "Debug"));
+        sidebar.Controls.Add(nav, 0, 1);
 
-        var debugHeader = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            FlowDirection = FlowDirection.LeftToRight,
-            Margin = new Padding(0, 0, 0, 6)
-        };
-        _debugCheck.Text = "Show debug details";
-        _debugCheck.AutoSize = true;
-        _debugCheck.CheckedChanged += (_, _) => _debugLog.Visible = _debugCheck.Checked;
-        debugHeader.Controls.Add(_debugCheck);
-        debugPanel.Controls.Add(debugHeader, 0, 0);
+        _startStopButton.Text = "Start VoiceReady";
+        _startStopButton.Height = 46;
+        _startStopButton.Dock = DockStyle.Bottom;
+        _startStopButton.Margin = new Padding(0, 18, 0, 0);
+        StylePrimaryButton(_startStopButton);
+        _startStopButton.Click += StartStopClicked;
+        sidebar.Controls.Add(_startStopButton, 0, 2);
 
-        _debugLog.Dock = DockStyle.Fill;
-        _debugLog.ReadOnly = true;
-        _debugLog.BorderStyle = BorderStyle.FixedSingle;
-        _debugLog.BackColor = Color.FromArgb(20, 24, 33);
-        _debugLog.ForeColor = Color.FromArgb(225, 231, 240);
-        _debugLog.Font = new Font("Consolas", 9);
-        _debugLog.Visible = false;
-        debugPanel.Controls.Add(_debugLog, 0, 1);
+        return sidebar;
     }
 
-    private Control BuildSetupPanel()
+    private Button CreateNavButton(string pageId, string text)
     {
-        var panel = CreatePanel("Setup");
-        var layout = (TableLayoutPanel)panel.Controls[0];
+        var button = new Button
+        {
+            Text = text,
+            Height = 42,
+            Dock = DockStyle.Top,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(14, 0, 0, 0),
+            Margin = new Padding(0, 0, 0, 8),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = SidebarBackground,
+            ForeColor = TextSecondary,
+            Font = new Font(Font.FontFamily, 10, FontStyle.Bold),
+            Tag = pageId
+        };
+        button.FlatAppearance.BorderSize = 0;
+        button.Click += (_, _) => ShowPage(pageId);
+        _navButtons[pageId] = button;
+        return button;
+    }
 
-        AddLabel(layout, "Microphone");
+    private void ShowPage(string pageId)
+    {
+        _activePage = pageId;
+        _contentHost.Controls.Clear();
+
+        var page = pageId switch
+        {
+            "audio" => BuildAudioPage(),
+            "keybinds" => BuildKeybindsPage(),
+            "debug" => BuildDebugPage(),
+            _ => BuildDashboardPage()
+        };
+
+        _contentHost.Controls.Add(page);
+        UpdateNavButtons();
+        SetControlsRunning(_runtime is not null);
+    }
+
+    private void UpdateNavButtons()
+    {
+        foreach (var (pageId, button) in _navButtons)
+        {
+            var active = pageId.Equals(_activePage, StringComparison.OrdinalIgnoreCase);
+            button.BackColor = active ? AccentMuted : SidebarBackground;
+            button.ForeColor = active ? TextPrimary : TextSecondary;
+        }
+    }
+
+    private Control BuildDashboardPage()
+    {
+        var page = CreatePage("Dashboard", "Monitor recognition, memory state, and command execution.");
+        var layout = (TableLayoutPanel)page.Controls[0];
+        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2 };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 46));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 54));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 36));
+        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 64));
+        layout.Controls.Add(grid);
+
+        var statusCard = CreateCard("Runtime");
+        var statusLayout = (TableLayoutPanel)statusCard.Controls[0];
+        if (string.IsNullOrWhiteSpace(_statusLabel.Text))
+        {
+            _statusLabel.Text = "Stopped";
+        }
+        _statusLabel.Font = new Font(Font.FontFamily, 22, FontStyle.Bold);
+        _statusLabel.ForeColor = _runtime is null ? Danger : Success;
+        _statusLabel.AutoSize = true;
+        statusLayout.Controls.Add(_statusLabel);
+
+        _levelMeter.Minimum = 0;
+        _levelMeter.Maximum = 100;
+        _levelMeter.Height = 22;
+        _levelMeter.Dock = DockStyle.Top;
+        _levelMeter.Margin = new Padding(0, 18, 0, 4);
+        statusLayout.Controls.Add(_levelMeter);
+        statusLayout.Controls.Add(CreateMutedLabel("Microphone level"));
+        grid.Controls.Add(statusCard, 0, 0);
+
+        var commandCard = CreateCard("Last command");
+        var commandLayout = (TableLayoutPanel)commandCard.Controls[0];
+        if (string.IsNullOrWhiteSpace(_speechLabel.Text))
+        {
+            _speechLabel.Text = "Heard: none";
+        }
+
+        if (string.IsNullOrWhiteSpace(_voiceResultLabel.Text))
+        {
+            _voiceResultLabel.Text = "Command: waiting";
+        }
+        ConfigureStatusLabel(_speechLabel, 54);
+        ConfigureStatusLabel(_voiceResultLabel, 62);
+        commandLayout.Controls.Add(_speechLabel);
+        commandLayout.Controls.Add(_voiceResultLabel);
+        grid.Controls.Add(commandCard, 1, 0);
+
+        var stateCard = CreateCard("Game state");
+        stateCard.Margin = new Padding(0, 16, 10, 0);
+        var stateLayout = (TableLayoutPanel)stateCard.Controls[0];
+        if (string.IsNullOrWhiteSpace(_menuStateLabel.Text))
+        {
+            _menuStateLabel.Text = "Menu: not connected";
+        }
+
+        if (string.IsNullOrWhiteSpace(_teamStateLabel.Text))
+        {
+            _teamStateLabel.Text = "Team: not connected";
+        }
+        ConfigureStatusLabel(_menuStateLabel, 58);
+        ConfigureStatusLabel(_teamStateLabel, 58);
+        stateLayout.Controls.Add(_menuStateLabel);
+        stateLayout.Controls.Add(_teamStateLabel);
+        grid.Controls.Add(stateCard, 0, 1);
+
+        var quickCard = CreateCard("Quick setup");
+        quickCard.Margin = new Padding(10, 16, 0, 0);
+        var quickLayout = (TableLayoutPanel)quickCard.Controls[0];
+        quickLayout.Controls.Add(CreateMutedLabel("Use the Audio menu for microphone and threshold tuning. Use Keybinds to match custom Ready or Not controls."));
+        quickLayout.Controls.Add(CreatePageLinkButton("Open Audio", "audio"));
+        quickLayout.Controls.Add(CreatePageLinkButton("Open Keybinds", "keybinds"));
+        grid.Controls.Add(quickCard, 1, 1);
+
+        return page;
+    }
+
+    private Control BuildAudioPage()
+    {
+        var page = CreatePage("Audio", "Choose the microphone and tune voice capture behavior.");
+        var layout = (TableLayoutPanel)page.Controls[0];
+        var card = CreateCard("Microphone and threshold");
+        var cardLayout = (TableLayoutPanel)card.Controls[0];
+
+        AddLabel(cardLayout, "Microphone");
         var deviceRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
         deviceRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         deviceRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         _microphoneCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         _microphoneCombo.Dock = DockStyle.Top;
+        StyleComboBox(_microphoneCombo);
         _refreshDevicesButton.Text = "Refresh";
         _refreshDevicesButton.AutoSize = true;
-        _refreshDevicesButton.Click += (_, _) => LoadMicrophones();
+        StyleSecondaryButton(_refreshDevicesButton);
+        _refreshDevicesButton.Click -= RefreshDevicesClicked;
+        _refreshDevicesButton.Click += RefreshDevicesClicked;
         deviceRow.Controls.Add(_microphoneCombo, 0, 0);
         deviceRow.Controls.Add(_refreshDevicesButton, 1, 0);
-        layout.Controls.Add(deviceRow);
+        cardLayout.Controls.Add(deviceRow);
 
         _automaticThresholdCheck.Text = "Automatic speech threshold";
         _automaticThresholdCheck.AutoSize = true;
         _automaticThresholdCheck.Checked = true;
         _automaticThresholdCheck.Margin = new Padding(0, 14, 0, 4);
-        _automaticThresholdCheck.CheckedChanged += (_, _) => UpdateThresholdControls();
-        layout.Controls.Add(_automaticThresholdCheck);
+        _automaticThresholdCheck.ForeColor = TextPrimary;
+        _automaticThresholdCheck.CheckedChanged -= ThresholdCheckedChanged;
+        _automaticThresholdCheck.CheckedChanged += ThresholdCheckedChanged;
+        cardLayout.Controls.Add(_automaticThresholdCheck);
 
-        AddLabel(layout, "Voice trigger threshold");
+        AddLabel(cardLayout, "Voice trigger threshold");
         _startThresholdSlider.Minimum = -70;
         _startThresholdSlider.Maximum = -15;
         _startThresholdSlider.Value = -35;
-        _startThresholdSlider.TickFrequency = 5;
+        _startThresholdSlider.AccentColor = Accent;
         _startThresholdSlider.Dock = DockStyle.Top;
-        _startThresholdSlider.ValueChanged += (_, _) => UpdateThresholdLabels();
-        layout.Controls.Add(_startThresholdSlider);
+        _startThresholdSlider.Height = 38;
+        _startThresholdSlider.ValueChanged -= ThresholdValueChanged;
+        _startThresholdSlider.ValueChanged += ThresholdValueChanged;
+        cardLayout.Controls.Add(_startThresholdSlider);
         _startThresholdValueLabel.AutoSize = true;
-        _startThresholdValueLabel.ForeColor = Color.FromArgb(81, 91, 107);
-        layout.Controls.Add(_startThresholdValueLabel);
+        _startThresholdValueLabel.ForeColor = TextSecondary;
+        cardLayout.Controls.Add(_startThresholdValueLabel);
 
         _endThresholdValueLabel.AutoSize = true;
-        _endThresholdValueLabel.ForeColor = Color.FromArgb(81, 91, 107);
-        layout.Controls.Add(_endThresholdValueLabel);
+        _endThresholdValueLabel.ForeColor = TextSecondary;
+        cardLayout.Controls.Add(_endThresholdValueLabel);
 
         var timingGrid = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
         timingGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         timingGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         AddNumericSetting(timingGrid, "Minimum speech ms", _minimumSpeechInput, 100, 1500, 350);
         AddNumericSetting(timingGrid, "Silence to finish ms", _trailingSilenceInput, 150, 2000, 550);
-        layout.Controls.Add(timingGrid);
+        cardLayout.Controls.Add(timingGrid);
 
-        _startStopButton.Text = "Start VoiceReady";
-        _startStopButton.Height = 44;
-        _startStopButton.Dock = DockStyle.Top;
-        _startStopButton.FlatStyle = FlatStyle.Flat;
-        _startStopButton.BackColor = Color.FromArgb(32, 103, 214);
-        _startStopButton.ForeColor = Color.White;
-        _startStopButton.FlatAppearance.BorderSize = 0;
-        _startStopButton.Margin = new Padding(0, 18, 0, 0);
-        _startStopButton.Click += async (_, _) => await ToggleRuntimeAsync();
-        layout.Controls.Add(_startStopButton);
+        _microphoneTestButton.Text = "Test microphone";
+        _microphoneTestButton.Height = 38;
+        _microphoneTestButton.Dock = DockStyle.Top;
+        _microphoneTestButton.Margin = new Padding(0, 18, 0, 8);
+        StyleSecondaryButton(_microphoneTestButton);
+        _microphoneTestButton.Click -= MicrophoneTestClicked;
+        _microphoneTestButton.Click += MicrophoneTestClicked;
+        cardLayout.Controls.Add(_microphoneTestButton);
+
+        _microphoneTestLevelMeter.Minimum = 0;
+        _microphoneTestLevelMeter.Maximum = 100;
+        _microphoneTestLevelMeter.Height = 22;
+        _microphoneTestLevelMeter.Dock = DockStyle.Top;
+        _microphoneTestLevelMeter.Margin = new Padding(0, 0, 0, 6);
+        cardLayout.Controls.Add(_microphoneTestLevelMeter);
+        cardLayout.Controls.Add(CreateMutedLabel("Mic test level"));
+
+        _microphoneTestLabel.Text = "Mic test: stopped";
+        _microphoneTestLabel.AutoSize = false;
+        _microphoneTestLabel.Height = 72;
+        _microphoneTestLabel.Dock = DockStyle.Top;
+        _microphoneTestLabel.ForeColor = TextPrimary;
+        _microphoneTestLabel.BackColor = PanelBackgroundAlt;
+        _microphoneTestLabel.Padding = new Padding(12, 10, 12, 0);
+        _microphoneTestLabel.Margin = new Padding(0, 0, 0, 4);
+        cardLayout.Controls.Add(_microphoneTestLabel);
+
+        layout.Controls.Add(card);
 
         UpdateThresholdLabels();
         UpdateThresholdControls();
-        return panel;
+        return page;
     }
 
-    private Control BuildStatusPanel()
+    private Control BuildKeybindsPage()
     {
-        var panel = CreatePanel("Live status");
-        var layout = (TableLayoutPanel)panel.Controls[0];
-
-        _statusLabel.Text = "Stopped";
-        _statusLabel.Font = new Font(Font.FontFamily, 13, FontStyle.Bold);
-        _statusLabel.ForeColor = Color.FromArgb(148, 49, 49);
-        _statusLabel.AutoSize = true;
-        layout.Controls.Add(_statusLabel);
-
-        _levelMeter.Minimum = 0;
-        _levelMeter.Maximum = 100;
-        _levelMeter.Height = 18;
-        _levelMeter.Dock = DockStyle.Top;
-        _levelMeter.Margin = new Padding(0, 14, 0, 10);
-        layout.Controls.Add(_levelMeter);
-
-        _menuStateLabel.Text = "Menu: not connected";
-        _teamStateLabel.Text = "Team: not connected";
-        _speechLabel.Text = "Heard: none";
-        _voiceResultLabel.Text = "Command: waiting";
-
-        foreach (var label in new[] { _menuStateLabel, _teamStateLabel, _speechLabel, _voiceResultLabel })
-        {
-            label.AutoSize = false;
-            label.Height = 42;
-            label.Dock = DockStyle.Top;
-            label.ForeColor = Color.FromArgb(36, 44, 57);
-            label.Padding = new Padding(0, 8, 0, 0);
-            layout.Controls.Add(label);
-        }
-
-        return panel;
+        var page = CreatePage("Keybinds", "Remap VoiceReady to match customized Ready or Not command-menu controls.");
+        var layout = (TableLayoutPanel)page.Controls[0];
+        layout.Controls.Add(BuildKeybindSection());
+        UpdateKeybindRows();
+        return page;
     }
 
-    private static Panel CreatePanel(string heading)
+    private Control BuildDebugPage()
+    {
+        var page = CreatePage("Debug", "Inspect runtime logs and memory-reader details.");
+        var layout = (TableLayoutPanel)page.Controls[0];
+        var card = CreateCard("Event log");
+        var cardLayout = (TableLayoutPanel)card.Controls[0];
+
+        _debugCheck.Text = "Show log output";
+        _debugCheck.AutoSize = true;
+        _debugCheck.Checked = true;
+        _debugCheck.ForeColor = TextPrimary;
+        _debugCheck.Margin = new Padding(0, 0, 0, 10);
+        _debugCheck.CheckedChanged -= DebugVisibilityChanged;
+        _debugCheck.CheckedChanged += DebugVisibilityChanged;
+        cardLayout.Controls.Add(_debugCheck);
+
+        _debugLog.Dock = DockStyle.Fill;
+        _debugLog.ReadOnly = true;
+        _debugLog.BorderStyle = BorderStyle.FixedSingle;
+        _debugLog.BackColor = Color.FromArgb(12, 12, 14);
+        _debugLog.ForeColor = Color.FromArgb(218, 218, 222);
+        _debugLog.Font = new Font("Cascadia Mono", 9);
+        _debugLog.Visible = _debugCheck.Checked;
+        cardLayout.Controls.Add(_debugLog);
+        layout.Controls.Add(card);
+
+        return page;
+    }
+
+    private void DebugVisibilityChanged(object? sender, EventArgs eventArgs)
+    {
+        _debugLog.Visible = _debugCheck.Checked;
+    }
+
+    private Panel CreatePage(string heading, string subtitle)
     {
         var panel = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.White,
+            BackColor = AppBackground
+        };
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            AutoScroll = false
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var header = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 1,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 20)
+        };
+        header.Controls.Add(new Label
+        {
+            Text = heading,
+            AutoSize = true,
+            Font = new Font(Font.FontFamily, 24, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Margin = new Padding(0, 0, 0, 3)
+        });
+        header.Controls.Add(new Label
+        {
+            Text = subtitle,
+            AutoSize = true,
+            ForeColor = TextSecondary,
+            Margin = new Padding(1, 0, 0, 0)
+        });
+        layout.Controls.Add(header);
+        panel.Controls.Add(layout);
+        return panel;
+    }
+
+    private Panel CreateCard(string heading)
+    {
+        var panel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = PanelBackground,
             Padding = new Padding(18),
-            Margin = new Padding(0, 0, 14, 0)
+            Margin = new Padding(0, 0, 10, 0)
         };
 
         var layout = new TableLayoutPanel
@@ -254,19 +492,17 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 1,
-            AutoScroll = true
+            AutoScroll = false
         };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        var title = new Label
+        layout.Controls.Add(new Label
         {
             Text = heading,
             AutoSize = true,
-            Font = new Font("Segoe UI", 14, FontStyle.Bold),
-            ForeColor = Color.FromArgb(24, 31, 42),
-            Margin = new Padding(0, 0, 0, 14)
-        };
-        layout.Controls.Add(title);
+            Font = new Font(Font.FontFamily, 13, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Margin = new Padding(0, 0, 0, 12)
+        });
         panel.Controls.Add(layout);
         return panel;
     }
@@ -277,22 +513,144 @@ public sealed class MainForm : Form
         {
             Text = text,
             AutoSize = true,
-            ForeColor = Color.FromArgb(81, 91, 107),
+            ForeColor = TextSecondary,
             Margin = new Padding(0, 10, 0, 4)
         });
     }
 
-    private static void AddNumericSetting(TableLayoutPanel layout, string label, NumericUpDown input, int min, int max, int value)
+    private static void AddNumericSetting(TableLayoutPanel layout, string label, DarkNumberInput input, int min, int max, int value)
     {
         var group = new TableLayoutPanel { Dock = DockStyle.Top, RowCount = 2, AutoSize = true, Margin = new Padding(0, 12, 8, 0) };
-        group.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = Color.FromArgb(81, 91, 107) });
+        group.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = TextSecondary });
         input.Minimum = min;
         input.Maximum = max;
         input.Value = value;
         input.Increment = 25;
         input.Dock = DockStyle.Top;
+        input.BackColor = PanelBackgroundAlt;
+        input.ForeColor = TextPrimary;
         group.Controls.Add(input);
         layout.Controls.Add(group);
+    }
+
+    private static Label CreateMutedLabel(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        ForeColor = TextSecondary,
+        Margin = new Padding(0, 4, 0, 8)
+    };
+
+    private Button CreatePageLinkButton(string text, string pageId)
+    {
+        var button = new Button
+        {
+            Text = text,
+            Height = 38,
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 12, 0, 0)
+        };
+        StyleSecondaryButton(button);
+        button.Click += (_, _) => ShowPage(pageId);
+        return button;
+    }
+
+    private static void ConfigureStatusLabel(Label label, int height)
+    {
+        label.AutoSize = false;
+        label.Height = height;
+        label.Dock = DockStyle.Top;
+        label.ForeColor = TextPrimary;
+        label.BackColor = PanelBackgroundAlt;
+        label.Padding = new Padding(12, 10, 12, 0);
+        label.Margin = new Padding(0, 0, 0, 10);
+    }
+
+    private static void StyleInput(Control control)
+    {
+        control.BackColor = PanelBackgroundAlt;
+        control.ForeColor = TextPrimary;
+    }
+
+    private void StyleComboBox(ComboBox comboBox)
+    {
+        comboBox.BackColor = PanelBackgroundAlt;
+        comboBox.ForeColor = TextPrimary;
+        comboBox.FlatStyle = FlatStyle.Flat;
+        comboBox.DrawMode = DrawMode.OwnerDrawFixed;
+        comboBox.ItemHeight = 28;
+        comboBox.DrawItem -= MicrophoneComboDrawItem;
+        comboBox.DrawItem += MicrophoneComboDrawItem;
+    }
+
+    private void MicrophoneComboDrawItem(object? sender, DrawItemEventArgs eventArgs)
+    {
+        if (sender is not ComboBox comboBox || eventArgs.Index < 0)
+        {
+            return;
+        }
+
+        var selected = (eventArgs.State & DrawItemState.Selected) == DrawItemState.Selected;
+        using var background = new SolidBrush(selected ? AccentMuted : PanelBackgroundAlt);
+        using var foreground = new SolidBrush(TextPrimary);
+        eventArgs.Graphics.FillRectangle(background, eventArgs.Bounds);
+        eventArgs.Graphics.DrawString(comboBox.Items[eventArgs.Index]?.ToString() ?? string.Empty, comboBox.Font, foreground, eventArgs.Bounds.X + 8, eventArgs.Bounds.Y + 5);
+        eventArgs.DrawFocusRectangle();
+    }
+
+    private static void StylePrimaryButton(Button button)
+    {
+        button.FlatStyle = FlatStyle.Flat;
+        button.BackColor = Accent;
+        button.ForeColor = Color.FromArgb(12, 12, 14);
+        button.FlatAppearance.BorderSize = 0;
+        button.Font = new Font(button.Font.FontFamily, button.Font.Size, FontStyle.Bold);
+    }
+
+    private static void StyleSecondaryButton(Button button)
+    {
+        button.FlatStyle = FlatStyle.Flat;
+        button.BackColor = PanelBackgroundAlt;
+        button.ForeColor = TextPrimary;
+        button.FlatAppearance.BorderColor = BorderColor;
+        button.FlatAppearance.BorderSize = 1;
+    }
+
+    private async void StartStopClicked(object? sender, EventArgs eventArgs)
+    {
+        await ToggleRuntimeAsync();
+    }
+
+    private void RefreshDevicesClicked(object? sender, EventArgs eventArgs)
+    {
+        LoadMicrophones();
+    }
+
+    private void ThresholdCheckedChanged(object? sender, EventArgs eventArgs)
+    {
+        UpdateThresholdControls();
+    }
+
+    private void ThresholdValueChanged(object? sender, EventArgs eventArgs)
+    {
+        UpdateThresholdLabels();
+    }
+
+    private void ResetAllClicked(object? sender, EventArgs eventArgs)
+    {
+        ResetAllKeybinds();
+    }
+
+    private async void MicrophoneTestClicked(object? sender, EventArgs eventArgs)
+    {
+        if (_microphoneTestTask is null)
+        {
+            await StartMicrophoneTestAsync();
+        }
+        else
+        {
+            await StopMicrophoneTestAsync();
+        }
     }
 
     private void OnLoad(object? sender, EventArgs eventArgs)
@@ -312,10 +670,13 @@ public sealed class MainForm : Form
         _memoryMap = MemoryMapLoader.Load(memoryMapPath);
         _commandMenuMap = File.Exists(commandMenuMapPath) ? CommandMenuMapLoader.Load(commandMenuMapPath) : null;
         _baseSettings = File.Exists(voiceSettingsPath) ? VoiceReadySettingsLoader.Load(voiceSettingsPath) : new VoiceReadySettings();
+        _voiceSettingsPath = voiceSettingsPath;
+        _baseSettings = ReplaceInputSettings(_baseSettings, NormalizeInputSettings(_baseSettings.Input));
 
         _startThresholdSlider.Value = Clamp((int)Math.Round(_baseSettings.Audio.SpeechStartDb), _startThresholdSlider.Minimum, _startThresholdSlider.Maximum);
         _minimumSpeechInput.Value = Clamp(_baseSettings.Audio.MinimumSpeechMilliseconds, (int)_minimumSpeechInput.Minimum, (int)_minimumSpeechInput.Maximum);
         _trailingSilenceInput.Value = Clamp(_baseSettings.Audio.TrailingSilenceMilliseconds, (int)_trailingSilenceInput.Minimum, (int)_trailingSilenceInput.Maximum);
+        UpdateKeybindRows();
         UpdateThresholdLabels();
     }
 
@@ -365,9 +726,14 @@ public sealed class MainForm : Form
             return;
         }
 
+        if (_microphoneTestTask is not null)
+        {
+            await StopMicrophoneTestAsync();
+        }
+
         SetControlsRunning(true);
         _statusLabel.Text = "Starting";
-        _statusLabel.ForeColor = Color.FromArgb(139, 95, 25);
+        _statusLabel.ForeColor = Warning;
         _debugLog.Clear();
         _lastMenuValue = null;
         _lastTeamValue = null;
@@ -398,14 +764,14 @@ public sealed class MainForm : Form
             _runtime.VoiceTask = Task.Run(() => RunVoiceLoopAsync(_runtime, _shutdown.Token));
             _stateTimer.Start();
             _statusLabel.Text = "Running";
-            _statusLabel.ForeColor = Color.FromArgb(28, 115, 73);
+            _statusLabel.ForeColor = Success;
             _startStopButton.Text = "Stop VoiceReady";
         }
         catch (Exception ex)
         {
             LogDebug($"Startup error: {ex.Message}");
             _statusLabel.Text = "Could not start";
-            _statusLabel.ForeColor = Color.FromArgb(148, 49, 49);
+            _statusLabel.ForeColor = Danger;
             MessageBox.Show(this, ex.Message, "VoiceReady startup failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             await StopRuntimeAsync();
         }
@@ -435,9 +801,122 @@ public sealed class MainForm : Form
         _shutdown = null;
         _levelMeter.Value = 0;
         _statusLabel.Text = "Stopped";
-        _statusLabel.ForeColor = Color.FromArgb(148, 49, 49);
+        _statusLabel.ForeColor = Danger;
         _startStopButton.Text = "Start VoiceReady";
         SetControlsRunning(false);
+    }
+
+    private async Task StartMicrophoneTestAsync()
+    {
+        if (_runtime is not null)
+        {
+            return;
+        }
+
+        _microphoneTestShutdown = new CancellationTokenSource();
+        var settings = BuildRuntimeSettings();
+        _lastMicrophoneTestTranscript = "none";
+        _microphoneTestButton.Text = "Stop microphone test";
+        _microphoneTestLevelMeter.Value = 0;
+        _microphoneTestLabel.Text = "Mic test: listening";
+        _speechLabel.Text = "Heard: mic test started";
+        LogDebug("Microphone test started.");
+        _microphoneTestTask = Task.Run(() => RunMicrophoneTestLoopAsync(settings, _microphoneTestShutdown.Token));
+        SetControlsRunning(false);
+        try
+        {
+            await Task.CompletedTask;
+        }
+        catch
+        {
+            // Start is fire-and-forget; loop errors are reported through the UI.
+        }
+    }
+
+    private async Task StopMicrophoneTestAsync()
+    {
+        _microphoneTestShutdown?.Cancel();
+
+        var task = _microphoneTestTask;
+        _microphoneTestTask = null;
+        if (task is not null)
+        {
+            try
+            {
+                await task.WaitAsync(TimeSpan.FromSeconds(2));
+            }
+            catch
+            {
+                // Audio capture can take a moment to unwind.
+            }
+        }
+
+        _microphoneTestShutdown?.Dispose();
+        _microphoneTestShutdown = null;
+        _microphoneTestButton.Text = "Test microphone";
+        _microphoneTestLabel.Text = "Mic test: stopped";
+        _microphoneTestLevelMeter.Value = 0;
+        _levelMeter.Value = 0;
+        LogDebug("Microphone test stopped.");
+        SetControlsRunning(_runtime is not null);
+    }
+
+    private async Task RunMicrophoneTestLoopAsync(VoiceReadySettings settings, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var audioSource = new WaveInAudioSource(settings.Audio);
+            audioSource.Start();
+            using var transcriber = new VoskTranscriber(settings.Vosk, _repoRoot, settings.Audio.SampleRate);
+            var segmenter = new SpeechSegmenter(settings.Audio);
+            LogDebug("Microphone test Vosk recognition started.");
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                while (audioSource.TryRead(out var frame) && frame is not null)
+                {
+                    var segment = segmenter.Process(frame);
+                    BeginInvoke(() => UpdateMicrophoneTestLevel(segmenter.CurrentDecibels, segmenter.IsSpeaking));
+
+                    if (segment is null)
+                    {
+                        continue;
+                    }
+
+                    var result = transcriber.Transcribe(segment);
+                    if (result is null)
+                    {
+                        continue;
+                    }
+
+                    BeginInvoke(() =>
+                    {
+                        _lastMicrophoneTestTranscript = result.Text;
+                        _microphoneTestLabel.Text = $"Mic test: transcript - {result.Text}";
+                        _speechLabel.Text = $"Heard: {result.Text}";
+                    });
+                    LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} mic test speech=\"{result.Text}\"");
+                }
+
+                await Task.Delay(10, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            BeginInvoke(() =>
+            {
+                _microphoneTestLabel.Text = $"Mic test error: {ex.Message}";
+                _microphoneTestButton.Text = "Test microphone";
+                SetControlsRunning(false);
+            });
+            LogDebug($"Microphone test error: {ex.Message}");
+            _microphoneTestTask = null;
+            _microphoneTestShutdown?.Dispose();
+            _microphoneTestShutdown = null;
+        }
     }
 
     private async Task RunVoiceLoopAsync(RuntimeContext runtime, CancellationToken cancellationToken)
@@ -511,7 +990,7 @@ public sealed class MainForm : Form
             BeginInvoke(() =>
             {
                 _statusLabel.Text = "Voice error";
-                _statusLabel.ForeColor = Color.FromArgb(148, 49, 49);
+                _statusLabel.ForeColor = Danger;
                 _voiceResultLabel.Text = $"Command: error - {ex.Message}";
             });
             LogDebug($"Voice loop error: {ex.Message}");
@@ -663,11 +1142,321 @@ public sealed class MainForm : Form
         };
     }
 
+    private Control BuildKeybindSection()
+    {
+        var card = CreateCard("Game keybinds");
+        var group = (TableLayoutPanel)card.Controls[0];
+
+        var header = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        header.Controls.Add(new Label
+        {
+            Text = "Command menu inputs",
+            AutoSize = true,
+            Font = new Font(Font.FontFamily, 11, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Margin = new Padding(0, 0, 0, 8)
+        }, 0, 0);
+
+        _resetAllKeybindsButton.Text = "Reset all";
+        _resetAllKeybindsButton.AutoSize = true;
+        _resetAllKeybindsButton.Margin = new Padding(8, 0, 0, 8);
+        StyleSecondaryButton(_resetAllKeybindsButton);
+        _resetAllKeybindsButton.Click -= ResetAllClicked;
+        _resetAllKeybindsButton.Click += ResetAllClicked;
+        header.Controls.Add(_resetAllKeybindsButton, 1, 0);
+        group.Controls.Add(header);
+
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 3,
+            AutoSize = true,
+            Padding = new Padding(0, 6, 0, 0)
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+        group.Controls.Add(grid);
+
+        AddKeybindRow(grid, "commandMenuOpen", "Open command menu");
+        foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" })
+        {
+            AddKeybindRow(grid, key, $"Command option {key}");
+        }
+
+        return card;
+    }
+
+    private void AddKeybindRow(TableLayoutPanel grid, string id, string label)
+    {
+        var row = grid.RowCount++;
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+
+        var labelControl = new Label
+        {
+            Text = label,
+            AutoSize = false,
+            Height = 36,
+            Dock = DockStyle.Fill,
+            ForeColor = TextSecondary,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(0, 3, 8, 3),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right
+        };
+
+        var bindButton = new Button
+        {
+            Text = "Default",
+            Width = 154,
+            Height = 32,
+            Margin = new Padding(0, 4, 8, 4),
+            Anchor = AnchorStyles.None,
+            Tag = id
+        };
+        StyleSecondaryButton(bindButton);
+        bindButton.Click += (_, _) => BeginKeybindCapture(id);
+        bindButton.MouseDown += OnKeybindMouseDown;
+
+        var resetButton = new Button
+        {
+            Text = "Reset",
+            AutoSize = false,
+            Width = 80,
+            Height = 32,
+            Margin = new Padding(0, 4, 0, 4),
+            Anchor = AnchorStyles.None,
+            Tag = id
+        };
+        StyleSecondaryButton(resetButton);
+        resetButton.Click += (_, _) => ResetKeybind(id);
+
+        grid.Controls.Add(labelControl, 0, row);
+        grid.Controls.Add(bindButton, 1, row);
+        grid.Controls.Add(resetButton, 2, row);
+        _keybindRows[id] = new KeybindRow(bindButton, resetButton);
+    }
+
+    private void BeginKeybindCapture(string id)
+    {
+        CancelPendingKeybindCapture();
+        _pendingKeybindId = id;
+        if (_keybindRows.TryGetValue(id, out var row))
+        {
+            row.BindButton.Text = "Press key or mouse";
+            row.BindButton.Focus();
+        }
+    }
+
+    private void OnKeybindKeyDown(object? sender, KeyEventArgs eventArgs)
+    {
+        if (_pendingKeybindId is null)
+        {
+            return;
+        }
+
+        eventArgs.Handled = true;
+        eventArgs.SuppressKeyPress = true;
+
+        if (eventArgs.KeyCode == Keys.Escape)
+        {
+            CancelPendingKeybindCapture();
+            return;
+        }
+
+        var scanCode = MapVirtualKey((uint)eventArgs.KeyCode, 0);
+        if (scanCode == 0)
+        {
+            return;
+        }
+
+        SaveKeybind(_pendingKeybindId, InputBinding.Keyboard(scanCode.ToString("X2"), FormatKeyName(eventArgs.KeyCode)));
+    }
+
+    private void OnKeybindMouseDown(object? sender, MouseEventArgs eventArgs)
+    {
+        if (_pendingKeybindId is null)
+        {
+            return;
+        }
+
+        var binding = eventArgs.Button switch
+        {
+            MouseButtons.Middle => InputBinding.MouseMiddle(),
+            MouseButtons.Right => InputBinding.MouseButton("MouseRight", "Right Mouse"),
+            MouseButtons.XButton1 => InputBinding.MouseButton("MouseX1", "Mouse Button 4"),
+            MouseButtons.XButton2 => InputBinding.MouseButton("MouseX2", "Mouse Button 5"),
+            _ => null
+        };
+
+        if (binding is not null)
+        {
+            SaveKeybind(_pendingKeybindId, binding);
+        }
+    }
+
+    private void SaveKeybind(string id, InputBinding binding)
+    {
+        var input = WithKeybind(_baseSettings.Input, id, binding);
+        _baseSettings = ReplaceInputSettings(_baseSettings, input);
+        PersistSettings();
+        _pendingKeybindId = null;
+        UpdateKeybindRows();
+    }
+
+    private void ResetKeybind(string id)
+    {
+        SaveKeybind(id, GetDefaultBinding(id));
+    }
+
+    private void ResetAllKeybinds()
+    {
+        var input = new InputSettings
+        {
+            CommandMenuOpen = InputBinding.MouseMiddle(),
+            CommandKeys = InputSettings.CreateDefaultCommandKeys(),
+            KeyHoldMilliseconds = _baseSettings.Input.KeyHoldMilliseconds,
+            BetweenKeysMilliseconds = _baseSettings.Input.BetweenKeysMilliseconds,
+            StateTransitionTimeoutMilliseconds = _baseSettings.Input.StateTransitionTimeoutMilliseconds,
+            CloseMenuScanCode = _baseSettings.Input.CloseMenuScanCode,
+            TeamSelectionWheelDelta = _baseSettings.Input.TeamSelectionWheelDelta,
+            TeamSelectionMaximumScrolls = _baseSettings.Input.TeamSelectionMaximumScrolls
+        };
+        _baseSettings = ReplaceInputSettings(_baseSettings, input);
+        PersistSettings();
+        _pendingKeybindId = null;
+        UpdateKeybindRows();
+    }
+
+    private void CancelPendingKeybindCapture()
+    {
+        _pendingKeybindId = null;
+        UpdateKeybindRows();
+    }
+
+    private void UpdateKeybindRows()
+    {
+        foreach (var (id, row) in _keybindRows)
+        {
+            row.BindButton.Text = GetBinding(id).DisplayName;
+        }
+    }
+
+    private InputBinding GetBinding(string id)
+    {
+        return id.Equals("commandMenuOpen", StringComparison.OrdinalIgnoreCase)
+            ? _baseSettings.Input.CommandMenuOpen
+            : _baseSettings.Input.GetCommandKey(id);
+    }
+
+    private static InputBinding GetDefaultBinding(string id)
+    {
+        return id.Equals("commandMenuOpen", StringComparison.OrdinalIgnoreCase)
+            ? InputBinding.MouseMiddle()
+            : InputSettings.GetDefaultCommandKey(id);
+    }
+
+    private static InputSettings WithKeybind(InputSettings input, string id, InputBinding binding)
+    {
+        var commandKeys = new Dictionary<string, InputBinding>(input.CommandKeys, StringComparer.OrdinalIgnoreCase);
+        if (id.Equals("commandMenuOpen", StringComparison.OrdinalIgnoreCase))
+        {
+            return CopyInputSettings(input, binding, commandKeys);
+        }
+
+        commandKeys[id] = binding;
+        return CopyInputSettings(input, input.CommandMenuOpen, commandKeys);
+    }
+
+    private static InputSettings NormalizeInputSettings(InputSettings input)
+    {
+        var commandKeys = InputSettings.CreateDefaultCommandKeys();
+        foreach (var (key, binding) in input.CommandKeys)
+        {
+            commandKeys[key] = binding;
+        }
+
+        return CopyInputSettings(input, input.CommandMenuOpen, commandKeys);
+    }
+
+    private static InputSettings CopyInputSettings(
+        InputSettings input,
+        InputBinding commandMenuOpen,
+        Dictionary<string, InputBinding> commandKeys) => new()
+    {
+        CommandMenuOpen = commandMenuOpen,
+        CommandKeys = commandKeys,
+        KeyHoldMilliseconds = input.KeyHoldMilliseconds,
+        BetweenKeysMilliseconds = input.BetweenKeysMilliseconds,
+        StateTransitionTimeoutMilliseconds = input.StateTransitionTimeoutMilliseconds,
+        CloseMenuScanCode = input.CloseMenuScanCode,
+        TeamSelectionWheelDelta = input.TeamSelectionWheelDelta,
+        TeamSelectionMaximumScrolls = input.TeamSelectionMaximumScrolls
+    };
+
+    private static VoiceReadySettings ReplaceInputSettings(VoiceReadySettings settings, InputSettings input) => new()
+    {
+        Audio = settings.Audio,
+        Vosk = settings.Vosk,
+        Input = input
+    };
+
+    private void PersistSettings()
+    {
+        if (string.IsNullOrWhiteSpace(_voiceSettingsPath))
+        {
+            return;
+        }
+
+        VoiceReadySettingsLoader.Save(_voiceSettingsPath, _baseSettings);
+    }
+
+    private static string FormatKeyName(Keys key)
+    {
+        return key switch
+        {
+            Keys.D0 => "0",
+            Keys.D1 => "1",
+            Keys.D2 => "2",
+            Keys.D3 => "3",
+            Keys.D4 => "4",
+            Keys.D5 => "5",
+            Keys.D6 => "6",
+            Keys.D7 => "7",
+            Keys.D8 => "8",
+            Keys.D9 => "9",
+            Keys.Space => "Space",
+            Keys.Oemtilde => "`",
+            Keys.OemMinus => "-",
+            Keys.Oemplus => "=",
+            Keys.OemOpenBrackets => "[",
+            Keys.OemCloseBrackets => "]",
+            Keys.OemPipe => "\\",
+            Keys.OemSemicolon => ";",
+            Keys.OemQuotes => "'",
+            Keys.Oemcomma => ",",
+            Keys.OemPeriod => ".",
+            Keys.OemQuestion => "/",
+            _ => key.ToString()
+        };
+    }
+
     private void UpdateLevel(double decibels, bool speaking)
     {
         var value = Clamp((int)Math.Round((decibels + 70) / 55 * 100), 0, 100);
         _levelMeter.Value = value;
         _statusLabel.Text = _runtime is null ? "Stopped" : speaking ? "Listening" : "Running";
+        _statusLabel.ForeColor = _runtime is null ? Danger : speaking ? Accent : Success;
+    }
+
+    private void UpdateMicrophoneTestLevel(double decibels, bool speaking)
+    {
+        var value = Clamp((int)Math.Round((decibels + 70) / 55 * 100), 0, 100);
+        _levelMeter.Value = value;
+        _microphoneTestLevelMeter.Value = value;
+        var state = speaking ? "hearing speech" : "listening";
+        _microphoneTestLabel.Text = $"Mic test: {state}\nLast transcript: {_lastMicrophoneTestTranscript}";
     }
 
     private void UpdateThresholdControls()
@@ -687,12 +1476,28 @@ public sealed class MainForm : Form
 
     private void SetControlsRunning(bool running)
     {
-        _microphoneCombo.Enabled = !running;
-        _refreshDevicesButton.Enabled = !running;
-        _automaticThresholdCheck.Enabled = !running;
-        _startThresholdSlider.Enabled = !running && !_automaticThresholdCheck.Checked;
-        _minimumSpeechInput.Enabled = !running;
-        _trailingSilenceInput.Enabled = !running;
+        var testingMicrophone = _microphoneTestTask is not null;
+        var editable = !running && !testingMicrophone;
+        _microphoneCombo.Enabled = editable;
+        _refreshDevicesButton.Enabled = editable;
+        _automaticThresholdCheck.Enabled = editable;
+        _startThresholdSlider.Enabled = editable && !_automaticThresholdCheck.Checked;
+        _minimumSpeechInput.Enabled = editable;
+        _trailingSilenceInput.Enabled = editable;
+        _microphoneTestButton.Enabled = !running;
+        foreach (var row in _keybindRows.Values)
+        {
+            row.BindButton.Enabled = !running;
+            row.ResetButton.Enabled = !running;
+        }
+        _resetAllKeybindsButton.Enabled = !running;
+
+        if (running)
+        {
+            _pendingKeybindId = null;
+            UpdateKeybindRows();
+        }
+
         _startStopButton.Enabled = true;
     }
 
@@ -716,13 +1521,22 @@ public sealed class MainForm : Form
 
     private async void OnFormClosing(object? sender, FormClosingEventArgs eventArgs)
     {
-        if (_runtime is null)
+        if (_runtime is null && _microphoneTestTask is null)
         {
             return;
         }
 
         eventArgs.Cancel = true;
-        await StopRuntimeAsync();
+        if (_microphoneTestTask is not null)
+        {
+            await StopMicrophoneTestAsync();
+        }
+
+        if (_runtime is not null)
+        {
+            await StopRuntimeAsync();
+        }
+
         Close();
     }
 
@@ -746,11 +1560,274 @@ public sealed class MainForm : Form
 
     private static double Clamp(double value, double min, double max) => Math.Min(Math.Max(value, min), max);
 
+    [DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint code, uint mapType);
+
     private sealed class DeviceItem(AudioInputDevice device)
     {
         public AudioInputDevice Device { get; } = device;
 
         public override string ToString() => $"{Device.Name} ({Device.DeviceNumber})";
+    }
+
+    private sealed record KeybindRow(Button BindButton, Button ResetButton);
+
+    private sealed class DarkSlider : Control
+    {
+        private bool _dragging;
+        private int _minimum;
+        private int _maximum = 100;
+        private int _value;
+
+        public event EventHandler? ValueChanged;
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Minimum
+        {
+            get => _minimum;
+            set
+            {
+                _minimum = value;
+                if (_maximum < _minimum)
+                {
+                    _maximum = _minimum;
+                }
+
+                Value = _value;
+                Invalidate();
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Maximum
+        {
+            get => _maximum;
+            set
+            {
+                _maximum = Math.Max(value, _minimum);
+                Value = _value;
+                Invalidate();
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Value
+        {
+            get => _value;
+            set
+            {
+                var next = Math.Min(Math.Max(value, _minimum), _maximum);
+                if (_value == next)
+                {
+                    return;
+                }
+
+                _value = next;
+                ValueChanged?.Invoke(this, EventArgs.Empty);
+                Invalidate();
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Color AccentColor { get; set; } = Accent;
+
+        public DarkSlider()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+            Height = 38;
+            BackColor = PanelBackground;
+            ForeColor = TextPrimary;
+            Cursor = Cursors.Hand;
+        }
+
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            base.OnPaint(eventArgs);
+            var graphics = eventArgs.Graphics;
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            var trackLeft = 10;
+            var trackRight = Width - 10;
+            var trackWidth = Math.Max(1, trackRight - trackLeft);
+            var y = Height / 2;
+            var ratio = _maximum == _minimum ? 0 : (double)(_value - _minimum) / (_maximum - _minimum);
+            var thumbX = trackLeft + (int)Math.Round(trackWidth * ratio);
+
+            using var trackBrush = new SolidBrush(PanelBackgroundAlt);
+            using var fillBrush = new SolidBrush(AccentColor);
+            using var thumbBrush = new SolidBrush(TextPrimary);
+            graphics.FillRectangle(trackBrush, trackLeft, y - 3, trackWidth, 6);
+            graphics.FillRectangle(fillBrush, trackLeft, y - 3, Math.Max(0, thumbX - trackLeft), 6);
+            graphics.FillEllipse(thumbBrush, thumbX - 7, y - 7, 14, 14);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs eventArgs)
+        {
+            base.OnMouseDown(eventArgs);
+            _dragging = true;
+            Capture = true;
+            SetValueFromX(eventArgs.X);
+        }
+
+        protected override void OnMouseMove(MouseEventArgs eventArgs)
+        {
+            base.OnMouseMove(eventArgs);
+            if (_dragging)
+            {
+                SetValueFromX(eventArgs.X);
+            }
+        }
+
+        protected override void OnMouseUp(MouseEventArgs eventArgs)
+        {
+            base.OnMouseUp(eventArgs);
+            _dragging = false;
+            Capture = false;
+        }
+
+        private void SetValueFromX(int x)
+        {
+            var trackLeft = 10;
+            var trackRight = Width - 10;
+            var ratio = trackRight == trackLeft ? 0 : (double)(x - trackLeft) / (trackRight - trackLeft);
+            Value = _minimum + (int)Math.Round(Math.Min(Math.Max(ratio, 0), 1) * (_maximum - _minimum));
+        }
+    }
+
+    private sealed class DarkNumberInput : UserControl
+    {
+        private readonly TextBox _textBox = new();
+        private readonly Button _upButton = new();
+        private readonly Button _downButton = new();
+        private decimal _minimum;
+        private decimal _maximum = 100;
+        private decimal _value;
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public decimal Minimum
+        {
+            get => _minimum;
+            set
+            {
+                _minimum = value;
+                if (_maximum < _minimum)
+                {
+                    _maximum = _minimum;
+                }
+
+                Value = _value;
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public decimal Maximum
+        {
+            get => _maximum;
+            set
+            {
+                _maximum = Math.Max(value, _minimum);
+                Value = _value;
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public decimal Value
+        {
+            get => _value;
+            set
+            {
+                _value = Math.Min(Math.Max(value, _minimum), _maximum);
+                _textBox.Text = _value.ToString("0");
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public decimal Increment { get; set; } = 1;
+
+        public DarkNumberInput()
+        {
+            Height = 34;
+            Dock = DockStyle.Top;
+            BackColor = PanelBackgroundAlt;
+            Padding = new Padding(1);
+
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = PanelBackgroundAlt
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34));
+            Controls.Add(layout);
+
+            _textBox.BorderStyle = BorderStyle.None;
+            _textBox.BackColor = PanelBackgroundAlt;
+            _textBox.ForeColor = TextPrimary;
+            _textBox.Dock = DockStyle.Fill;
+            _textBox.TextAlign = HorizontalAlignment.Center;
+            _textBox.Margin = new Padding(8, 8, 8, 0);
+            _textBox.Leave += (_, _) => CommitText();
+            _textBox.KeyDown += (_, eventArgs) =>
+            {
+                if (eventArgs.KeyCode == Keys.Enter)
+                {
+                    CommitText();
+                    eventArgs.SuppressKeyPress = true;
+                }
+            };
+            layout.Controls.Add(_textBox, 0, 0);
+
+            var buttons = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                Margin = new Padding(0)
+            };
+            buttons.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            buttons.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            layout.Controls.Add(buttons, 1, 0);
+
+            ConfigureStepperButton(_upButton, "+");
+            ConfigureStepperButton(_downButton, "-");
+            _upButton.Click += (_, _) => Value += Increment;
+            _downButton.Click += (_, _) => Value -= Increment;
+            buttons.Controls.Add(_upButton, 0, 0);
+            buttons.Controls.Add(_downButton, 0, 1);
+        }
+
+        protected override void OnEnabledChanged(EventArgs eventArgs)
+        {
+            base.OnEnabledChanged(eventArgs);
+            _textBox.Enabled = Enabled;
+            _upButton.Enabled = Enabled;
+            _downButton.Enabled = Enabled;
+        }
+
+        private static void ConfigureStepperButton(Button button, string text)
+        {
+            button.Text = text;
+            button.Dock = DockStyle.Fill;
+            button.Margin = new Padding(0);
+            button.FlatStyle = FlatStyle.Flat;
+            button.BackColor = Color.FromArgb(42, 42, 47);
+            button.ForeColor = TextPrimary;
+            button.FlatAppearance.BorderColor = BorderColor;
+            button.FlatAppearance.BorderSize = 1;
+        }
+
+        private void CommitText()
+        {
+            if (decimal.TryParse(_textBox.Text, out var parsed))
+            {
+                Value = parsed;
+                return;
+            }
+
+            _textBox.Text = _value.ToString("0");
+        }
     }
 
     private sealed class RuntimeContext(

@@ -73,7 +73,7 @@ using (processReader)
         ?? [];
     var keyboardInput = new KeyboardInput();
     var semicolonKey = new SemicolonKeyPoller();
-    var temporaryExecutor = new TemporaryDoorCommandExecutor(menuReader, keyboardInput);
+    var temporaryExecutor = new TemporaryDoorCommandExecutor(menuReader, keyboardInput, voiceSettings.Input);
     var parser = new VoiceCommandParser();
     var planExecutor = new CommandPlanExecutor(
         menuReader,

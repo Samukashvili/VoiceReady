@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using VoiceReady.Core.Configuration;
 
 namespace VoiceReady.Core.Input;
 
@@ -15,7 +16,54 @@ public sealed class KeyboardInput
     private const uint KeyEventFScanCode = 0x0008;
     private const uint MouseEventFMiddleDown = 0x0020;
     private const uint MouseEventFMiddleUp = 0x0040;
+    private const uint MouseEventFRightDown = 0x0008;
+    private const uint MouseEventFRightUp = 0x0010;
+    private const uint MouseEventFXDown = 0x0080;
+    private const uint MouseEventFXUp = 0x0100;
     private const uint MouseEventFWheel = 0x0800;
+    private const uint XButton1 = 0x0001;
+    private const uint XButton2 = 0x0002;
+
+    public void TapInput(InputBinding binding, TimeSpan holdDuration)
+    {
+        if (binding.Kind.Equals("Keyboard", StringComparison.OrdinalIgnoreCase))
+        {
+            TapScanCode(binding.ScanCodeValue, holdDuration);
+            return;
+        }
+
+        if (binding.Kind.Equals("MouseMiddle", StringComparison.OrdinalIgnoreCase))
+        {
+            TapMiddleMouse(holdDuration);
+            return;
+        }
+
+        if (binding.Kind.Equals("MouseRight", StringComparison.OrdinalIgnoreCase))
+        {
+            SendMouse(MouseEventFRightDown);
+            Thread.Sleep(holdDuration);
+            SendMouse(MouseEventFRightUp);
+            return;
+        }
+
+        if (binding.Kind.Equals("MouseX1", StringComparison.OrdinalIgnoreCase))
+        {
+            SendMouse(MouseEventFXDown, XButton1);
+            Thread.Sleep(holdDuration);
+            SendMouse(MouseEventFXUp, XButton1);
+            return;
+        }
+
+        if (binding.Kind.Equals("MouseX2", StringComparison.OrdinalIgnoreCase))
+        {
+            SendMouse(MouseEventFXDown, XButton2);
+            Thread.Sleep(holdDuration);
+            SendMouse(MouseEventFXUp, XButton2);
+            return;
+        }
+
+        throw new NotSupportedException($"Unsupported input binding: {binding.Kind}");
+    }
 
     public void TapScanCode(ushort scanCode, TimeSpan holdDuration)
     {

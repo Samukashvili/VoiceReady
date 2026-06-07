@@ -20,7 +20,7 @@ At runtime, VoiceReady:
 - Checks values such as the active command menu, selected team, and whether the game currently exposes a known trapped-door command state.
 - Sends the matching command sequence using normal keyboard and mouse input.
 
-Default Ready or Not keybinds are currently required because VoiceReady sends the same keys the player would normally press. Custom keybind support may be added in a future update.
+VoiceReady sends the same command-menu inputs the player would normally press. If your Ready or Not command-menu binds are customized, use the Keybinds menu in the UI to remap VoiceReady to match them.
 
 VoiceReady only receives information after the player has obtained it in-game. For example, a door trap is only known to VoiceReady after Ready or Not exposes that state because the player can currently see the trap or has already discovered it by peeking or using the mirror wand. VoiceReady cannot know that a door is booby trapped before the player observes it, and it does not give the player hidden information they would not already have.
 
@@ -64,7 +64,9 @@ Start Ready or Not first, then run:
 run-ui.bat
 ```
 
-Use the UI to select your microphone, calibrate or adjust the speech threshold, start VoiceReady, and watch status/debug output.
+Use the dark-mode UI to start or stop VoiceReady from the sidebar, then move between dedicated menus for live status, audio setup, keybind remapping, and debug output. The Audio menu includes a microphone test that listens and prints local transcriptions without attaching to Ready or Not or sending any input.
+
+The Keybinds menu lets you click a binding, press the matching key or supported mouse button, and save the remap to `config\voice_ready.json`. Each binding has its own Reset button, and Reset all restores the default Ready or Not command-menu bindings.
 
 For the console voice runner, use:
 
@@ -107,7 +109,7 @@ For best results, look at the door, ground, teammate, suspect, or civilian you w
 - Doorway and other-doorway command-menu voice support is still incomplete.
 - Pick-the-lock voice support is not complete yet because the locked-door state address has not been identified. This is actively being worked on.
 - Queued commands are not supported yet.
-- Default Ready or Not keybinds are required for command execution.
+- Keybind remapping supports single keyboard keys plus middle mouse, right mouse, mouse button 4, and mouse button 5. Modifier key chords are not supported yet.
 
 ## Common Issues
 
@@ -146,7 +148,7 @@ VoiceReady also needs the local Vosk runtime files in `tools\vendor\vosk`. If bu
 
 ### VoiceReady does not hear you
 
-Open `run-ui.bat`, select the correct microphone, then use calibration or lower the speech-start threshold. If your mic is very quiet, Windows input gain may also need adjustment.
+Open `run-ui.bat`, go to the Audio menu, select the correct microphone, then use calibration or lower the speech-start threshold. If your mic is very quiet, Windows input gain may also need adjustment.
 
 The audio settings are stored in:
 
@@ -159,6 +161,8 @@ config\voice_ready.json
 Make sure Ready or Not is running and focused. VoiceReady sends normal keyboard and mouse input, so another focused window can receive the input instead of the game.
 
 Also make sure you are looking at a valid in-game command target. Some commands only work when the matching Ready or Not command menu is available.
+
+If you changed Ready or Not's command-menu keybinds, open the Keybinds menu in VoiceReady and remap the command menu and command option inputs to match the game.
 
 ### Commands work for some menus but not others
 
@@ -198,6 +202,8 @@ Important values include:
 - `audio.deviceNumber`: selected microphone number.
 - `audio.speechStartDb`: how loud speech must be before capture starts.
 - `audio.speechEndDb`: how quiet input must be before a phrase ends.
+- `input.commandMenuOpen`: key or mouse input used to open the Ready or Not command menu.
+- `input.commandKeys`: key or mouse inputs used for command-menu options `1` through `0`.
 - `vosk.modelPath`: path to the local Vosk model.
 - `vosk.additionalGrammarPhrases`: extra phrases the recognizer should expect.
 

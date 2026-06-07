@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace VoiceReady.Core.Configuration;
 
@@ -46,7 +47,9 @@ public sealed class VoskSettings
 
 public sealed class InputSettings
 {
-    public CommandMenuOpenInput CommandMenuOpen { get; init; } = new();
+    public InputBinding CommandMenuOpen { get; init; } = InputBinding.MouseMiddle();
+
+    public Dictionary<string, InputBinding> CommandKeys { get; init; } = CreateDefaultCommandKeys();
 
     public int KeyHoldMilliseconds { get; init; } = 35;
 
@@ -64,13 +67,71 @@ public sealed class InputSettings
         CloseMenuScanCode.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? CloseMenuScanCode[2..] : CloseMenuScanCode,
         NumberStyles.HexNumber,
         CultureInfo.InvariantCulture);
+
+    public InputBinding GetCommandKey(string key)
+    {
+        return CommandKeys.TryGetValue(key, out var binding)
+            ? binding
+            : GetDefaultCommandKey(key);
+    }
+
+    public static Dictionary<string, InputBinding> CreateDefaultCommandKeys() => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["1"] = InputBinding.Keyboard("02", "1"),
+        ["2"] = InputBinding.Keyboard("03", "2"),
+        ["3"] = InputBinding.Keyboard("04", "3"),
+        ["4"] = InputBinding.Keyboard("05", "4"),
+        ["5"] = InputBinding.Keyboard("06", "5"),
+        ["6"] = InputBinding.Keyboard("07", "6"),
+        ["7"] = InputBinding.Keyboard("08", "7"),
+        ["8"] = InputBinding.Keyboard("09", "8"),
+        ["9"] = InputBinding.Keyboard("0A", "9"),
+        ["0"] = InputBinding.Keyboard("0B", "0")
+    };
+
+    public static InputBinding GetDefaultCommandKey(string key)
+    {
+        var defaults = CreateDefaultCommandKeys();
+        return defaults.TryGetValue(key, out var binding)
+            ? binding
+            : throw new NotSupportedException($"Unsupported command key: {key}");
+    }
 }
 
-public sealed class CommandMenuOpenInput
+public sealed class InputBinding
 {
     public string Kind { get; init; } = "MouseMiddle";
 
     public string ScanCode { get; init; } = string.Empty;
+
+    public string DisplayName { get; init; } = "Middle Mouse";
+
+    [JsonIgnore]
+    public ushort ScanCodeValue => string.IsNullOrWhiteSpace(ScanCode)
+        ? (ushort)0
+        : ushort.Parse(
+            ScanCode.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? ScanCode[2..] : ScanCode,
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture);
+
+    public static InputBinding Keyboard(string scanCode, string displayName) => new()
+    {
+        Kind = "Keyboard",
+        ScanCode = scanCode,
+        DisplayName = displayName
+    };
+
+    public static InputBinding MouseMiddle() => new()
+    {
+        Kind = "MouseMiddle",
+        DisplayName = "Middle Mouse"
+    };
+
+    public static InputBinding MouseButton(string kind, string displayName) => new()
+    {
+        Kind = kind,
+        DisplayName = displayName
+    };
 }
 
 public static class VoiceReadySettingsLoader
@@ -79,7 +140,9 @@ public static class VoiceReadySettingsLoader
     {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
+        AllowTrailingCommas = true,
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
     public static VoiceReadySettings Load(string path)
@@ -87,5 +150,17 @@ public static class VoiceReadySettingsLoader
         using var stream = File.OpenRead(path);
         return JsonSerializer.Deserialize<VoiceReadySettings>(stream, SerializerOptions)
             ?? throw new InvalidOperationException($"Could not deserialize VoiceReady settings: {path}");
+    }
+
+    public static void Save(string path, VoiceReadySettings settings)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        using var stream = File.Create(path);
+        JsonSerializer.Serialize(stream, settings, SerializerOptions);
     }
 }
