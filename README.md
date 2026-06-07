@@ -49,7 +49,12 @@ Commands may target a team by including `red team`, `blue team`, or `gold team`,
 red team breach using c2 and clear with flashbang
 blue team search and secure
 gold team fall in
+red team get behind me
+on me
 ```
+
+`fall in`, `on me`, and `get behind me` default to the Single File formation. You can request
+another formation explicitly with `double file`, `diamond formation`, or `wedge formation`.
 
 Saying only a team name selects that team and closes the command menu. Team selection is performed with mouse-wheel input only while a command menu is open, and the result is verified using the voted `teamSelection` pointers before command keys are sent.
 

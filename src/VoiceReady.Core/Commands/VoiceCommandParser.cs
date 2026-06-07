@@ -264,7 +264,8 @@ public sealed class VoiceCommandParser
             var formationKey = HasAny(tokens, "single") ? "1"
                 : HasAny(tokens, "double") ? "2"
                 : HasAny(tokens, "diamond") ? "3"
-                : "4";
+                : HasAny(tokens, "wedge") ? "4"
+                : "1";
 
             return new CommandPlan(
                 "GroundFallIn",
@@ -373,7 +374,13 @@ public sealed class VoiceCommandParser
             .Replace("c four", "c4")
             .Replace("c for", "c4")
             .Replace("9-bang", "9bang")
-            .Replace("nine bang", "ninebang");
+            .Replace("nine bang", "ninebang")
+            .Replace("get behind me", "fall in")
+            .Replace("on me", "fall in")
+            .Replace("falling in", "fall in")
+            .Replace("falling", "fall in");
+
+        normalized = Regex.Replace(normalized, "\\ball in\\b", "fall in");
 
         normalized = NonWords.Replace(normalized, " ");
         var tokens = Whitespace.Split(normalized)
