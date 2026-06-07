@@ -19,7 +19,7 @@ public sealed class VoskTranscriber : IDisposable
         if (!Directory.Exists(modelPath))
         {
             throw new DirectoryNotFoundException(
-                $"Vosk model was not found: {modelPath}. Run install-dependencies.bat first.");
+                $"Vosk model was not found: {modelPath}. Download or clone the full repository, including tools/vosk/models.");
         }
 
         Vosk.Vosk.SetLogLevel(-2);

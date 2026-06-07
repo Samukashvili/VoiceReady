@@ -1,20 +1,58 @@
 # VoiceReady
 
-VoiceReady is a read-only companion foundation for detecting Ready or Not command-menu state through module-relative pointer paths.
+VoiceReady is a local voice-command assistant for Ready or Not. It listens to your microphone, recognizes supported spoken commands with a local Vosk speech model, checks the current in-game command-menu state, and sends the matching keyboard or mouse input.
 
-This scaffold does not modify game files, write process memory, inject code, or hook game functions. It only opens the game process with read/query permissions and reads configured pointer paths.
+VoiceReady does not modify game files, write process memory, inject code, or use a remote transcription service.
 
-## Current Pieces
+## How It Was Created
 
-- `src/VoiceReady.Core/Memory`: read-only Windows process reader and Cheat Engine pointer-path resolver.
-- `src/VoiceReady.Core/Detection`: redundant menu-state reader that votes across many pointer paths.
-- `src/VoiceReady.Core/Configuration`: JSON memory-map loader.
-- `src/VoiceReady.Cli`: polling/debug CLI for mapping observed command context values.
-- `src/VoiceReady.App`: player-facing Windows UI for microphone setup, voice thresholds, live status, and optional debug output.
-- `config/memory_map.json`: current 4-byte menu-state pointer paths.
-- `config/command_menus.json`: command context values and key mappings discovered so far.
+VoiceReady was created by reverse engineering Ready or Not with Cheat Engine. The project uses pointer paths extracted from that research to read specific in-game state values, including command-menu state, selected team, and context-sensitive door information.
 
-## Run
+Those values are used to decide which normal Ready or Not command-menu inputs should be sent after a voice command is recognized. VoiceReady executes commands through emulated keyboard and mouse input. It does not patch, hook, inject, or write to Ready or Not memory.
+
+## How It Works
+
+At runtime, VoiceReady:
+
+- Captures microphone audio locally.
+- Uses a local Vosk speech-recognition model to turn supported phrases into command intents.
+- Reads Ready or Not process memory with read-only access to understand the command context the player is currently in.
+- Checks values such as the active command menu, selected team, and whether the game currently exposes a known trapped-door command state.
+- Sends the matching command sequence using normal keyboard and mouse input.
+
+Default Ready or Not keybinds are currently required because VoiceReady sends the same keys the player would normally press. Custom keybind support may be added in a future update.
+
+VoiceReady only receives information after the player has obtained it in-game. For example, a door trap is only known to VoiceReady after Ready or Not exposes that state because the player can currently see the trap or has already discovered it by peeking or using the mirror wand. VoiceReady cannot know that a door is booby trapped before the player observes it, and it does not give the player hidden information they would not already have.
+
+## What You Need
+
+- Windows
+- Ready or Not
+- A working microphone
+- .NET 10 SDK installed and available on PATH
+
+You do not need Python, Whisper, PyTorch, or an OpenAI API key. Earlier prototypes used Whisper, but the current app uses Vosk through .NET.
+
+## Why There Is No Prebuilt EXE
+
+VoiceReady is distributed as source code instead of a prebuilt `.exe` because the project is intended to stay open and inspectable. A compiled executable is much harder for users to read and verify, while this repository lets you see the code, configuration, setup scripts, and exact commands being run.
+
+## First-Time Setup
+
+Download or clone the full repository. The required Vosk runtime files and English speech model are included locally in the repo:
+
+```text
+tools\vendor\vosk\
+tools\vosk\models\vosk-model-small-en-us-0.15\
+```
+
+There is no dependency installer script anymore. The only external requirement is the .NET 10 SDK. Check that .NET is available with:
+
+```powershell
+dotnet --version
+```
+
+## Run The App
 
 Start Ready or Not first, then run:
 
@@ -22,37 +60,31 @@ Start Ready or Not first, then run:
 run-ui.bat
 ```
 
-The UI lets players choose a microphone, start or stop VoiceReady, use automatic speech-threshold calibration, override the decibel threshold manually, adjust speech timing, and show an optional debug log with the same state, pointer-root, speech, and command-result diagnostics printed by the CLI.
+Use the UI to select your microphone, calibrate or adjust the speech threshold, start VoiceReady, and watch status/debug output.
 
-The development CLI is still available:
-
-```powershell
-dotnet run --project src\VoiceReady.Cli
-```
-
-The CLI prints a new line whenever the voted menu-state value changes.
-
-Voice mode:
-
-```powershell
-dotnet run --project src\VoiceReady.Cli -- --voice
-```
-
-or:
+For the console voice runner, use:
 
 ```bat
 run-voice.bat
 ```
 
-For first-time setup from source, run:
+The UI runner is recommended for normal use.
 
-```bat
-install-dependencies.bat
+If Windows blocks the `.bat` files, run the app manually from PowerShell:
+
+```powershell
+dotnet run --project src\VoiceReady.App
 ```
 
-Voice mode captures microphone audio, segments speech locally using an RMS/decibel threshold, recognizes completed speech segments in-process with a fully local Vosk model, parses recognized command phrases, and executes state-gated key sequences.
+For console voice mode:
 
-Commands may target a team by including `red team`, `blue team`, or `gold team`, for example:
+```powershell
+dotnet run --project src\VoiceReady.Cli -- --voice
+```
+
+## Basic Voice Commands
+
+Commands can target a team by saying `red team`, `blue team`, or `gold team` before the command:
 
 ```text
 red team breach using c2 and clear with flashbang
@@ -62,66 +94,113 @@ red team get behind me
 on me
 ```
 
-`fall in`, `on me`, and `get behind me` default to the Single File formation. You can request
-another formation explicitly with `double file`, `diamond formation`, or `wedge formation`.
+`fall in`, `on me`, and `get behind me` default to Single File formation. You can also say `double file`, `diamond formation`, or `wedge formation`.
 
-Saying only a team name selects that team and closes the command menu. Team selection is performed with mouse-wheel input only while a command menu is open, and the result is verified using the voted `teamSelection` pointers before command keys are sent.
+For best results, look at the door, ground, teammate, suspect, or civilian you want to command before speaking.
 
-Trap-aware door commands use the menu-state value `TrappedDoorCommandMenu`, which appears when the door command menu has inserted `DisarmTrap` at key `6`.
+## Current Limitations
 
-Vosk is configured in `config/voice_ready.json`. The default expected model layout is:
+- Doorway and other-doorway command-menu voice support is still incomplete.
+- Pick-the-lock voice support is not complete yet because the locked-door state address has not been identified. This is actively being worked on.
+- Queued commands are not supported yet.
+- Default Ready or Not keybinds are required for command execution.
+
+## Common Issues
+
+### .NET SDK was not found
+
+If `dotnet` is not recognized, install the .NET 10 SDK, then open a new terminal and try again.
+
+Check that .NET is visible with:
+
+```bat
+dotnet --version
+```
+
+### Vosk model was not found
+
+If VoiceReady reports that the Vosk model was not found, the repository is incomplete or the model folder was moved. The expected model path is:
 
 ```text
-tools/vosk/
-  download-model.ps1
-  models/vosk-model-small-en-us-0.15/
+tools\vosk\models\vosk-model-small-en-us-0.15
 ```
 
-The installer restores the Vosk C# package and downloads the lightweight English model into the repo. Recognition is local at runtime and does not call a remote transcription API.
+The folder should contain files such as:
 
-```powershell
-dotnet restore VoiceReady.slnx
-powershell -ExecutionPolicy Bypass -File tools\vosk\download-model.ps1
+```text
+conf\model.conf
+am\final.mdl
+graph\HCLr.fst
+graph\Gr.fst
 ```
 
-The runtime grammar is generated from command phrases, team prefixes, equipment names, alternate phrasings, and entries in `vosk.additionalGrammarPhrases`. Add unusual phrases there without changing code.
+Download or clone the repository again if those files are missing.
 
-Known menu-state values currently include gameplay/no menu, escape menu, blank menu, interaction prompt, and the first door command/submenu states.
+### Vosk runtime DLLs were not found
 
-Known team-selection values are `0` for an NPC command context, `1` for Red, `2` for Blue, and `5` for Gold. Values `3` and `4` remain intentionally unmapped until observed.
+VoiceReady also needs the local Vosk runtime files in `tools\vendor\vosk`. If build or startup errors mention `Vosk.dll`, `libvosk.dll`, `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, or `libwinpthread-1.dll`, download or clone the full repository again.
 
-## Mapping Values
+### VoiceReady does not hear you
 
-Update `config/memory_map.json` as you identify stable values:
+Open `run-ui.bat`, select the correct microphone, then use calibration or lower the speech-start threshold. If your mic is very quiet, Windows input gain may also need adjustment.
 
-```json
-{
-  "name": "Door",
-  "value": 123
-}
+The audio settings are stored in:
+
+```text
+config\voice_ready.json
 ```
 
-The value reader intentionally uses `Int32` / 4-byte reads because that matched the most reliable Cheat Engine observations.
+### Commands are recognized but nothing happens in game
 
-## Pointer Root Relocation
+Make sure Ready or Not is running and focused. VoiceReady sends normal keyboard and mouse input, so another focused window can receive the input instead of the game.
 
-Each distinct module-relative pointer root can define one wildcard byte signature in `config/memory_map.json`.
-At startup, VoiceReady scans the configured module, requires the signature to match exactly once, calculates
-the referenced root from its RIP-relative displacement, and caches the result for the lifetime of the process.
+Also make sure you are looking at a valid in-game command target. Some commands only work when the matching Ready or Not command menu is available.
 
-The existing `baseOffset` remains a fallback when a signature is missing, malformed, or no longer unique.
-Startup diagnostics report `source=signature` or `source=fallback` for every root. A fallback after a game
-update means that root's signature should be regenerated and validated.
+### Commands work for some menus but not others
 
-New pointer paths that use an existing `baseOffset` automatically reuse its root signature. A pointer path
-with a new root should also add one entry to that pointer group's `rootSignatures` array.
+VoiceReady depends on configured Ready or Not command-menu state values. If the game updates and changes those values, some menu detection can stop working until the configuration is updated.
 
-## Pointer Offset Order
+The relevant configuration files are:
 
-The current config uses `Listed`, which matched the provided Cheat Engine pointer rows during a live smoke test:
-
-```json
-"offsetOrder": "Listed"
+```text
+config\memory_map.json
+config\command_menus.json
 ```
 
-If future pointer exports fail to resolve, the alternative supported value is `CheatEnginePointerScanner`, which resolves offsets from the last pointer-scanner column back to `Offset 0`.
+### Speech recognition is inaccurate
+
+Try speaking shorter commands, pausing after each command, and keeping background noise low. You can add unusual phrases to:
+
+```text
+config\voice_ready.json
+```
+
+Look for `vosk.additionalGrammarPhrases`.
+
+### Windows blocks the batch files
+
+Windows may block downloaded `.bat` files depending on your security settings. If that happens, use the manual PowerShell commands in the setup and run sections above.
+
+## Configuration
+
+Main user-facing settings live in:
+
+```text
+config\voice_ready.json
+```
+
+Important values include:
+
+- `audio.deviceNumber`: selected microphone number.
+- `audio.speechStartDb`: how loud speech must be before capture starts.
+- `audio.speechEndDb`: how quiet input must be before a phrase ends.
+- `vosk.modelPath`: path to the local Vosk model.
+- `vosk.additionalGrammarPhrases`: extra phrases the recognizer should expect.
+
+## Third-Party Notices
+
+Third-party dependency and license information is listed in:
+
+```text
+THIRD-PARTY-LICENSES.md
+```
