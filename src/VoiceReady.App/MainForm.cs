@@ -6,6 +6,7 @@ using VoiceReady.Core.Input;
 using VoiceReady.Core.Memory;
 using VoiceReady.Core.Transcription;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace VoiceReady.App;
@@ -48,6 +49,7 @@ public sealed class MainForm : Form
     private string _repoRoot = string.Empty;
     private string _configDir = string.Empty;
     private string _voiceSettingsPath = string.Empty;
+    private string _diagnosticLogPath = string.Empty;
     private string? _pendingKeybindId;
     private int? _lastMenuValue;
     private int? _lastTeamValue;
@@ -67,6 +69,24 @@ public sealed class MainForm : Form
     private static readonly Color Danger = Color.FromArgb(239, 100, 97);
     private static readonly Color Success = Color.FromArgb(87, 201, 140);
     private static readonly Color Warning = Color.FromArgb(232, 172, 85);
+    private static readonly string[] RequiredVoskModelFiles =
+    [
+        "conf\\model.conf",
+        "am\\final.mdl",
+        "graph\\HCLr.fst",
+        "graph\\Gr.fst",
+        "graph\\phones\\word_boundary.int",
+        "ivector\\final.ie"
+    ];
+
+    private static readonly string[] RequiredVoskNativeFiles =
+    [
+        "tools\\vendor\\vosk\\lib\\netstandard2.0\\Vosk.dll",
+        "tools\\vendor\\vosk\\native\\win-x64\\libvosk.dll",
+        "tools\\vendor\\vosk\\native\\win-x64\\libstdc++-6.dll",
+        "tools\\vendor\\vosk\\native\\win-x64\\libgcc_s_seh-1.dll",
+        "tools\\vendor\\vosk\\native\\win-x64\\libwinpthread-1.dll"
+    ];
 
     public MainForm()
     {
@@ -657,6 +677,12 @@ public sealed class MainForm : Form
     {
         _repoRoot = FindRepoRoot(AppContext.BaseDirectory);
         _configDir = Path.Combine(_repoRoot, "config");
+        Directory.CreateDirectory(_configDir);
+        _diagnosticLogPath = Path.Combine(_configDir, "voice_ready_diagnostics.log");
+        File.WriteAllText(_diagnosticLogPath, $"VoiceReady diagnostics started {DateTimeOffset.Now:O}{Environment.NewLine}");
+        LogDiagnostic($"Repo root: {_repoRoot}");
+        LogDiagnostic($"Process architecture: {RuntimeInformation.ProcessArchitecture}");
+        LogDiagnostic($".NET: {Environment.Version}");
         LoadConfiguration();
         LoadMicrophones();
     }
@@ -741,9 +767,13 @@ public sealed class MainForm : Form
 
         try
         {
+            LogDiagnostic("Start VoiceReady requested.");
             _shutdown = new CancellationTokenSource();
             var settings = BuildRuntimeSettings();
+            ValidateStartupAssets(settings);
+            LogDiagnostic("Startup assets validated.");
             var processReader = ProcessMemoryReader.AttachByProcessName(_memoryMap.ProcessNames);
+            LogDiagnostic($"Attached to {processReader.ProcessName} ({processReader.ProcessId}).");
             var menuReader = new MenuStateReader(processReader, _memoryMap.MenuState.PointerPaths);
             var teamSelectionReader = new MenuStateReader(processReader, _memoryMap.TeamSelection.PointerPaths);
             var keyboardInput = new KeyboardInput();
@@ -761,6 +791,7 @@ public sealed class MainForm : Form
             LogDebug($"Reading {_memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
             LogDebug($"Reading {_memoryMap.TeamSelection.PointerPaths.Count} team-selection pointer paths.");
 
+            LogDiagnostic("Starting voice loop task.");
             _runtime.VoiceTask = Task.Run(() => RunVoiceLoopAsync(_runtime, _shutdown.Token));
             _stateTimer.Start();
             _statusLabel.Text = "Running";
@@ -815,6 +846,20 @@ public sealed class MainForm : Form
 
         _microphoneTestShutdown = new CancellationTokenSource();
         var settings = BuildRuntimeSettings();
+        try
+        {
+            LogDiagnostic("Microphone test requested.");
+            ValidateStartupAssets(settings);
+        }
+        catch (Exception ex)
+        {
+            _microphoneTestShutdown.Dispose();
+            _microphoneTestShutdown = null;
+            _microphoneTestLabel.Text = $"Mic test error: {ex.Message}";
+            MessageBox.Show(this, ex.Message, "VoiceReady microphone test failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
         _lastMicrophoneTestTranscript = "none";
         _microphoneTestButton.Text = "Stop microphone test";
         _microphoneTestLevelMeter.Value = 0;
@@ -865,9 +910,13 @@ public sealed class MainForm : Form
     {
         try
         {
+            LogDiagnostic("Microphone test loop creating audio source.");
             using var audioSource = new WaveInAudioSource(settings.Audio);
             audioSource.Start();
+            LogDiagnostic("Microphone test audio source started.");
+            LogDiagnostic("Microphone test creating Vosk transcriber.");
             using var transcriber = new VoskTranscriber(settings.Vosk, _repoRoot, settings.Audio.SampleRate);
+            LogDiagnostic("Microphone test Vosk transcriber created.");
             var segmenter = new SpeechSegmenter(settings.Audio);
             LogDebug("Microphone test Vosk recognition started.");
 
@@ -923,8 +972,10 @@ public sealed class MainForm : Form
     {
         try
         {
+            LogDiagnostic("Voice loop creating audio source.");
             using var audioSource = new WaveInAudioSource(runtime.Settings.Audio);
             audioSource.Start();
+            LogDiagnostic("Voice loop audio source started.");
             LogDebug("Microphone capture started.");
 
             var activeSettings = runtime.Settings;
@@ -933,7 +984,9 @@ public sealed class MainForm : Form
                 activeSettings = await CalibrateSettingsAsync(audioSource, activeSettings, cancellationToken);
             }
 
+            LogDiagnostic("Voice loop creating Vosk transcriber.");
             using var transcriber = new VoskTranscriber(activeSettings.Vosk, _repoRoot, activeSettings.Audio.SampleRate);
+            LogDiagnostic("Voice loop Vosk transcriber created.");
             var segmenter = new SpeechSegmenter(activeSettings.Audio);
             LogDebug("Local Vosk recognition started.");
 
@@ -1517,6 +1570,66 @@ public sealed class MainForm : Form
         _debugLog.AppendText(message + Environment.NewLine);
         _debugLog.SelectionStart = _debugLog.TextLength;
         _debugLog.ScrollToCaret();
+        LogDiagnostic(message);
+    }
+
+    private void LogDiagnostic(string message)
+    {
+        if (string.IsNullOrWhiteSpace(_diagnosticLogPath))
+        {
+            return;
+        }
+
+        try
+        {
+            File.AppendAllText(_diagnosticLogPath, $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Diagnostic logging must never block the UI or command execution.
+        }
+    }
+
+    private void ValidateStartupAssets(VoiceReadySettings settings)
+    {
+        if (RuntimeInformation.ProcessArchitecture != Architecture.X64)
+        {
+            throw new InvalidOperationException(
+                $"VoiceReady currently bundles x64 Vosk native files, but the app is running as {RuntimeInformation.ProcessArchitecture}. Install the x64 .NET SDK and run VoiceReady from an x64 terminal.");
+        }
+
+        foreach (var relativePath in RequiredVoskNativeFiles)
+        {
+            var path = Path.Combine(_repoRoot, relativePath);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"Required Vosk native file is missing: {path}");
+            }
+        }
+
+        var modelPath = Path.IsPathRooted(settings.Vosk.ModelPath)
+            ? settings.Vosk.ModelPath
+            : Path.GetFullPath(Path.Combine(_repoRoot, settings.Vosk.ModelPath));
+        if (!Directory.Exists(modelPath))
+        {
+            throw new DirectoryNotFoundException($"Vosk model folder is missing: {modelPath}");
+        }
+
+        foreach (var relativePath in RequiredVoskModelFiles)
+        {
+            var path = Path.Combine(modelPath, relativePath);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"Required Vosk model file is missing: {path}");
+            }
+
+            if (new FileInfo(path).Length == 0)
+            {
+                throw new InvalidOperationException($"Required Vosk model file is empty: {path}");
+            }
+        }
+
+        LogDiagnostic($"Vosk assets OK. Model={modelPath}");
     }
 
     private async void OnFormClosing(object? sender, FormClosingEventArgs eventArgs)

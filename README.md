@@ -135,6 +135,27 @@ dotnet run --project src\VoiceReady.App
 
 That will show the full startup error in the terminal.
 
+### VoiceReady exits with error code `-1073741819`
+
+This is Windows error `0xC0000005`, usually a native access violation. If it happens when pressing Start VoiceReady, send the contents of:
+
+```text
+config\voice_ready_diagnostics.log
+```
+
+That log records the last startup step before native audio or Vosk recognition code runs.
+
+### Repository ZIP size looks small
+
+A downloaded ZIP around 60 MB can be normal because the bundled Vosk model and native files compress heavily. After extraction, make sure these paths exist:
+
+```text
+tools\vendor\vosk\native\win-x64\libvosk.dll
+tools\vosk\models\vosk-model-small-en-us-0.15\am\final.mdl
+tools\vosk\models\vosk-model-small-en-us-0.15\graph\HCLr.fst
+tools\vosk\models\vosk-model-small-en-us-0.15\graph\Gr.fst
+```
+
 ### Vosk model was not found
 
 If VoiceReady reports that the Vosk model was not found, the repository is incomplete or the model folder was moved. The expected model path is:
