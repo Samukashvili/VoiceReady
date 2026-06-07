@@ -52,7 +52,9 @@ There is no dependency installer script anymore. The only external requirement i
 dotnet --version
 ```
 
-Developers who want to verify the bundled Vosk files can download the official `Vosk` NuGet package and the official `vosk-model-small-en-us-0.15` model archive listed in `THIRD-PARTY-LICENSES.md`, extract them locally, and compare the extracted files against `tools\vendor\vosk\` and `tools\vosk\models\vosk-model-small-en-us-0.15\` with a file-hash tool such as PowerShell `Get-FileHash`.
+## Verifying Bundled Vosk Files
+
+Developers or automated repo reviewers can verify the bundled Vosk files by downloading the official `Vosk` NuGet package and the official `vosk-model-small-en-us-0.15` model archive listed in `THIRD-PARTY-LICENSES.md`, extracting them locally, and comparing the extracted files against `tools\vendor\vosk\` and `tools\vosk\models\vosk-model-small-en-us-0.15\` with a file-hash tool such as PowerShell `Get-FileHash`.
 
 ## Run The App
 
