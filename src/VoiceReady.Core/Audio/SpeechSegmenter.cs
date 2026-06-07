@@ -15,9 +15,14 @@ public sealed class SpeechSegmenter
         _settings = settings;
     }
 
+    public double CurrentDecibels { get; private set; } = -96;
+
+    public bool IsSpeaking => _isSpeaking;
+
     public SpeechSegment? Process(PcmAudioFrame frame)
     {
         var decibels = CalculateDecibels(frame.Data);
+        CurrentDecibels = decibels;
         var frameMilliseconds = _settings.FrameMilliseconds;
 
         if (!_isSpeaking && decibels >= _settings.SpeechStartDb)
@@ -69,7 +74,7 @@ public sealed class SpeechSegmenter
         _activeSpeech.SetLength(0);
     }
 
-    private static double CalculateDecibels(byte[] pcm16)
+    public static double CalculateDecibels(byte[] pcm16)
     {
         if (pcm16.Length < 2)
         {

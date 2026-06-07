@@ -41,6 +41,12 @@ public sealed class CommandPlanExecutor
 
     public bool TryExecute(CommandPlan plan, out string message)
     {
+        using var shiftRelease = _keyboardInput.ReleaseShiftIfPressed();
+        return TryExecuteCore(plan, out message);
+    }
+
+    private bool TryExecuteCore(CommandPlan plan, out string message)
+    {
         if (plan.Steps.Count == 0 && !string.IsNullOrWhiteSpace(plan.TeamSelection))
         {
             return TrySelectTeamOnly(plan.TeamSelection, out message);

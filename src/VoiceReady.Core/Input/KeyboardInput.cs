@@ -5,6 +5,10 @@ namespace VoiceReady.Core.Input;
 
 public sealed class KeyboardInput
 {
+    private const int VirtualKeyLeftShift = 0xA0;
+    private const int VirtualKeyRightShift = 0xA1;
+    private const ushort LeftShiftScanCode = 0x2A;
+    private const ushort RightShiftScanCode = 0x36;
     private const uint InputKeyboard = 1;
     private const uint InputMouse = 0;
     private const uint KeyEventFKeyUp = 0x0002;
@@ -31,6 +35,26 @@ public sealed class KeyboardInput
     {
         SendMouse(MouseEventFWheel, unchecked((uint)delta));
     }
+
+    public IDisposable ReleaseShiftIfPressed()
+    {
+        var leftShiftDown = IsKeyDown(VirtualKeyLeftShift);
+        var rightShiftDown = IsKeyDown(VirtualKeyRightShift);
+
+        if (leftShiftDown)
+        {
+            Send(LeftShiftScanCode, keyUp: true);
+        }
+
+        if (rightShiftDown)
+        {
+            Send(RightShiftScanCode, keyUp: true);
+        }
+
+        return new ShiftReleaseScope(leftShiftDown, rightShiftDown);
+    }
+
+    private static bool IsKeyDown(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
 
     private static void Send(ushort scanCode, bool keyUp)
     {
@@ -80,6 +104,33 @@ public sealed class KeyboardInput
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint numberOfInputs, INPUT[] inputs, int inputSize);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
+
+    private sealed class ShiftReleaseScope(bool restoreLeftShift, bool restoreRightShift) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            if (restoreLeftShift)
+            {
+                Send(LeftShiftScanCode, keyUp: false);
+            }
+
+            if (restoreRightShift)
+            {
+                Send(RightShiftScanCode, keyUp: false);
+            }
+        }
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct INPUT

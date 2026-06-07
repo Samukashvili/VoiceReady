@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/VoiceReady.App/VoiceReady.App.csproj" />
     <Project Path="src/VoiceReady.Cli/VoiceReady.Cli.csproj" />
     <Project Path="src/VoiceReady.Core/VoiceReady.Core.csproj" />
   </Folder>

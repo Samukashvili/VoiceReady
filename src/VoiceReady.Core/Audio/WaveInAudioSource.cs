@@ -5,6 +5,8 @@ using VoiceReady.Core.Configuration;
 
 namespace VoiceReady.Core.Audio;
 
+public sealed record AudioInputDevice(int DeviceNumber, string Name);
+
 public sealed class WaveInAudioSource : IDisposable
 {
     private const int WaveMapper = -1;
@@ -23,6 +25,21 @@ public sealed class WaveInAudioSource : IDisposable
     {
         _settings = settings;
         _callback = OnWaveIn;
+    }
+
+    public static IReadOnlyList<AudioInputDevice> GetInputDevices()
+    {
+        var devices = new List<AudioInputDevice>();
+        var count = waveInGetNumDevs();
+        for (var i = 0; i < count; i++)
+        {
+            if (waveInGetDevCaps(i, out var caps, Marshal.SizeOf<WAVEINCAPS>()) == 0)
+            {
+                devices.Add(new AudioInputDevice(i, caps.szPname));
+            }
+        }
+
+        return devices;
     }
 
     public void Start()
@@ -163,6 +180,27 @@ public sealed class WaveInAudioSource : IDisposable
         public IntPtr lpNext;
         public IntPtr reserved;
     }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct WAVEINCAPS
+    {
+        public ushort wMid;
+        public ushort wPid;
+        public uint vDriverVersion;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        public string szPname;
+
+        public uint dwFormats;
+        public ushort wChannels;
+        public ushort wReserved1;
+    }
+
+    [DllImport("winmm.dll", SetLastError = true)]
+    private static extern int waveInGetNumDevs();
+
+    [DllImport("winmm.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern int waveInGetDevCaps(int uDeviceID, out WAVEINCAPS pwic, int cbwic);
 
     [DllImport("winmm.dll", SetLastError = true)]
     private static extern int waveInOpen(out IntPtr hWaveIn, int uDeviceID, ref WAVEFORMATEX lpFormat, WaveInProc dwCallback, IntPtr dwInstance, int dwFlags);

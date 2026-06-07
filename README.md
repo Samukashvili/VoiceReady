@@ -10,12 +10,21 @@ This scaffold does not modify game files, write process memory, inject code, or 
 - `src/VoiceReady.Core/Detection`: redundant menu-state reader that votes across many pointer paths.
 - `src/VoiceReady.Core/Configuration`: JSON memory-map loader.
 - `src/VoiceReady.Cli`: polling/debug CLI for mapping observed command context values.
+- `src/VoiceReady.App`: player-facing Windows UI for microphone setup, voice thresholds, live status, and optional debug output.
 - `config/memory_map.json`: current 4-byte menu-state pointer paths.
 - `config/command_menus.json`: command context values and key mappings discovered so far.
 
 ## Run
 
 Start Ready or Not first, then run:
+
+```bat
+run-ui.bat
+```
+
+The UI lets players choose a microphone, start or stop VoiceReady, use automatic speech-threshold calibration, override the decibel threshold manually, adjust speech timing, and show an optional debug log with the same state, pointer-root, speech, and command-result diagnostics printed by the CLI.
+
+The development CLI is still available:
 
 ```powershell
 dotnet run --project src\VoiceReady.Cli
