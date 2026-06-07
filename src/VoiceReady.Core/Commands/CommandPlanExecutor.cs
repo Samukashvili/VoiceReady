@@ -7,6 +7,7 @@ namespace VoiceReady.Core.Commands;
 public sealed class CommandPlanExecutor
 {
     private const string ClosedStateName = "GameplayNoMenu";
+    private const string InteractionPromptStateName = "InteractionPrompt";
     private const string DoorCommandMenuStateName = "DoorCommandMenu";
     private const string TrappedDoorCommandMenuStateName = "TrappedDoorCommandMenu";
 
@@ -81,7 +82,13 @@ public sealed class CommandPlanExecutor
             return false;
         }
 
-        if (IsClosed(snapshot) && plan.CanOpenMenuFromClosed)
+        var isDoorCommandPlan = plan.RequiredInitialState.Equals(DoorCommandMenuStateName, StringComparison.OrdinalIgnoreCase);
+        var isInteractionOverlayFallback = false;
+        if (snapshot.VotedValue.HasValue && allowedInitialStates.Any(state => state.Value == snapshot.VotedValue.Value))
+        {
+            requiredStateValue = snapshot.VotedValue.Value;
+        }
+        else if (IsClosed(snapshot) && plan.CanOpenMenuFromClosed)
         {
             TapCommandMenuOpen();
             if (!WaitForAnyState(allowedInitialStates.Select(state => state.Value), out var matchedState))
@@ -92,6 +99,19 @@ public sealed class CommandPlanExecutor
             }
 
             requiredStateValue = matchedState;
+        }
+        else if (IsInteractionPrompt(snapshot) && isDoorCommandPlan && plan.CanOpenMenuFromClosed)
+        {
+            TapCommandMenuOpen();
+            if (WaitForAnyState(allowedInitialStates.Select(state => state.Value), out var matchedState))
+            {
+                requiredStateValue = matchedState;
+            }
+            else
+            {
+                requiredStateValue = ResolveInteractionOverlayFallbackState(plan, requiredStateValue);
+                isInteractionOverlayFallback = true;
+            }
         }
         else if (!allowedInitialStates.Any(state => snapshot.VotedValue == state.Value))
         {
@@ -112,6 +132,7 @@ public sealed class CommandPlanExecutor
 
         var steps = ResolveSteps(plan, requiredStateValue);
         var isTrappedDoorCommandMenu = IsState(requiredStateValue, TrappedDoorCommandMenuStateName);
+
         foreach (var step in steps)
         {
             if (step.Name.Equals("DisarmTrap", StringComparison.OrdinalIgnoreCase) && !isTrappedDoorCommandMenu)
@@ -138,9 +159,12 @@ public sealed class CommandPlanExecutor
 
             if (!WaitForState(expectedStateValue))
             {
-                CloseIfOpen();
-                message = $"Step {step.Name} did not transition to {step.ExpectedStateAfter}.";
-                return false;
+                if (!isInteractionOverlayFallback)
+                {
+                    CloseIfOpen();
+                    message = $"Step {step.Name} did not transition to {step.ExpectedStateAfter}.";
+                    return false;
+                }
             }
         }
 
@@ -244,6 +268,23 @@ public sealed class CommandPlanExecutor
     private bool IsClosed(MenuStateSnapshot snapshot)
     {
         return _stateValuesByName.TryGetValue(ClosedStateName, out var closedValue) && snapshot.VotedValue == closedValue;
+    }
+
+    private bool IsInteractionPrompt(MenuStateSnapshot snapshot)
+    {
+        return _stateValuesByName.TryGetValue(InteractionPromptStateName, out var interactionPromptValue) &&
+            snapshot.VotedValue == interactionPromptValue;
+    }
+
+    private int ResolveInteractionOverlayFallbackState(CommandPlan plan, int defaultStateValue)
+    {
+        if (plan.Steps.Any(step => step.Name.Equals("DisarmTrap", StringComparison.OrdinalIgnoreCase)) &&
+            _stateValuesByName.TryGetValue(TrappedDoorCommandMenuStateName, out var trappedDoorValue))
+        {
+            return trappedDoorValue;
+        }
+
+        return defaultStateValue;
     }
 
     private void TapCommandMenuOpen()
