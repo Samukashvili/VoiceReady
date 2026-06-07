@@ -123,6 +123,18 @@ Check that .NET is visible with:
 dotnet --version
 ```
 
+### `run-ui.bat` opens and immediately closes
+
+Run `run-ui.bat` again after this update. The launcher now keeps the window open when startup fails and prints the reason.
+
+The most common cause is that the .NET 10 SDK is missing. The normal .NET runtime is not enough for `dotnet run`; this source-code distribution requires the SDK. You can also open PowerShell in the VoiceReady folder and run:
+
+```powershell
+dotnet run --project src\VoiceReady.App
+```
+
+That will show the full startup error in the terminal.
+
 ### Vosk model was not found
 
 If VoiceReady reports that the Vosk model was not found, the repository is incomplete or the model folder was moved. The expected model path is:
