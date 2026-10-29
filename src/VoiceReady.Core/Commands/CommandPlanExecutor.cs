@@ -165,6 +165,12 @@ public sealed class CommandPlanExecutor
 
             if (!WaitForState(expectedStateValue))
             {
+                if (step.CompletesIfMenuCloses && IsClosed(_menuStateReader.Read()))
+                {
+                    message = $"Executed {plan.Name} ({step.Name} ran directly).";
+                    return true;
+                }
+
                 if (!isInteractionOverlayFallback)
                 {
                     CloseIfOpen();

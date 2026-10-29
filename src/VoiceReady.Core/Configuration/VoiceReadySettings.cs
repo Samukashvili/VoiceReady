@@ -11,6 +11,14 @@ public sealed class VoiceReadySettings
     public VoskSettings Vosk { get; init; } = new();
 
     public InputSettings Input { get; init; } = new();
+
+    public GameSettings Game { get; init; } = new();
+}
+
+public sealed class GameSettings
+{
+    /// <summary>Optional path to the Ready or Not executable. Empty means auto-detect the running game.</summary>
+    public string ExecutablePath { get; init; } = string.Empty;
 }
 
 public sealed class AudioSettings
@@ -63,6 +71,7 @@ public sealed class InputSettings
 
     public int TeamSelectionMaximumScrolls { get; init; } = 5;
 
+    [JsonIgnore]
     public ushort CloseMenuScanCodeValue => ushort.Parse(
         CloseMenuScanCode.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? CloseMenuScanCode[2..] : CloseMenuScanCode,
         NumberStyles.HexNumber,

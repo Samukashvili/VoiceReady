@@ -4,3 +4,4 @@ obj/
 .idea/
 *.user
 *.suo
+config/voice_ready_diagnostics.log

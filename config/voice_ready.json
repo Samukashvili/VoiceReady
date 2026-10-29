@@ -90,8 +90,11 @@
     "keyHoldMilliseconds": 35,
     "betweenKeysMilliseconds": 80,
     "stateTransitionTimeoutMilliseconds": 700,
+    "closeMenuScanCode": "01",
     "teamSelectionWheelDelta": -120,
-    "teamSelectionMaximumScrolls": 5,
-    "closeMenuScanCode": "01"
+    "teamSelectionMaximumScrolls": 5
+  },
+  "game": {
+    "executablePath": ""
   }
 }

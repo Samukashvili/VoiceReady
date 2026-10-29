@@ -6,7 +6,9 @@ VoiceReady does not modify game files, write process memory, inject code, or use
 
 ## How It Was Created
 
-VoiceReady was created by reverse engineering Ready or Not with Cheat Engine. The project uses pointer paths extracted from that research to read specific in-game state values, including command-menu state, selected team, and context-sensitive door information.
+VoiceReady was created by reverse engineering Ready or Not with Cheat Engine. It reads specific in-game state values, including command-menu state, selected team, and context-sensitive door information.
+
+VoiceReady reads that state through Unreal Engine's own reflection data instead of hardcoded addresses. It locates the engine's name table and world with byte signatures, then follows named fields such as `PlayerController.AcknowledgedPawn.SwatCommandWidget.ActiveCommandPage`. Field offsets are looked up by name at runtime, so the same configuration works on every player's PC and keeps working when game updates rearrange class layouts. The open command menu is identified by the commands it lists, not by on-screen size, so resolution and UI scale do not matter. The original Cheat Engine pointer paths are kept only as a fallback if reflection cannot start.
 
 Those values are used to decide which normal Ready or Not command-menu inputs should be sent after a voice command is recognized. VoiceReady executes commands through emulated keyboard and mouse input. It does not patch, hook, inject, or write to Ready or Not memory.
 
@@ -213,7 +215,9 @@ If you changed Ready or Not's command-menu keybinds, open the Keybinds menu in V
 
 ### Commands work for some menus but not others
 
-VoiceReady depends on configured Ready or Not command-menu state values. If the game updates and changes those values, some menu detection can stop working until the configuration is updated.
+VoiceReady recognizes each command menu by the list of commands it shows (`commandPages` in `config\memory_map.json`). If a game update adds or reorders commands in a menu, that menu shows up as `unmapped page ...` in the debug output together with its exact command list; add that list to the matching state's `commandPages`.
+
+The debug output also shows `source=reflection` or `source=pointers`. If it says `pointers`, the `fallback=` reason explains which reflection step failed after a game update.
 
 The relevant configuration files are:
 

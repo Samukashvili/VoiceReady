@@ -1,8 +1,29 @@
 {
-  "processNames": [
-    "ReadyOrNotSteam-Win64-Shipping",
-    "ReadyOrNotSteam-Win64-Shipping.exe"
-  ],
+  "processNames": ["ReadyOrNotSteam-Win64-Shipping", "ReadyOrNotSteam-Win64-Shipping.exe"],
+  "processNamePattern": "ReadyOrNot*-Win64-Shipping",
+  "reflection": {
+    "enabled": true,
+    "namePoolSignatures": [
+      {
+        "pattern": "48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? C6 05 ?? ?? ?? ?? 01 0F 10",
+        "displacementOffset": 3,
+        "instructionEndOffset": 7
+      }
+    ],
+    "gWorldSignatures": [
+      {
+        "pattern": "48 8B 1D ?? ?? ?? ?? 48 85 DB 74 ?? 41 B0 01",
+        "displacementOffset": 3,
+        "instructionEndOffset": 7
+      }
+    ],
+    "menuOpenPath": "OwningGameInstance.LocalPlayers[0].PlayerController.AcknowledgedPawn.bIsSwatCommandOpen",
+    "escapeMenuOpenPath": "OwningGameInstance.LocalPlayers[0].PlayerController.PauseMenu.PauseMenu.bIsActive",
+    "commandPagePath": "OwningGameInstance.LocalPlayers[0].PlayerController.AcknowledgedPawn.SwatCommandWidget.ActiveCommandPage",
+    "parentCommandsPath": "OwningGameInstance.LocalPlayers[0].PlayerController.AcknowledgedPawn.SwatCommandWidget.ParentCommands",
+    "commandTypeField": "CommandType",
+    "teamSelectionPath": "OwningGameInstance.LocalPlayers[0].PlayerController.AcknowledgedPawn.SwatCommandWidget.ActiveTeamType"
+  },
   "menuState": {
     "moduleName": "ReadyOrNotSteam-Win64-Shipping.exe",
     "offsetOrder": "Listed",
@@ -69,75 +90,121 @@
       },
       {
         "name": "DoorCommandMenu",
-        "value": 26673452
+        "value": 26673452,
+        "commandPages": [
+          ["None|StackUp", "None", "None", "None", "DeployMirrorgun", "DeployDoorJam|RemoveDoorJam", "Cover", "OpenDoor|CloseDoor"]
+        ]
       },
       {
         "name": "TrappedDoorCommandMenu",
-        "value": 29098284
+        "value": 29098284,
+        "commandPages": [
+          ["None|StackUp", "None", "None", "None", "DeployMirrorgun", "DisarmTrap", "DeployDoorJam|RemoveDoorJam", "Cover", "OpenDoor|CloseDoor"]
+        ]
       },
       {
         "name": "DoorwayCommandMenu",
-        "value": 19398956
+        "value": 19398956,
+        "commandPages": [
+          ["StackUp|None", "None", "None", "None", "Cover"]
+        ],
+        "submenu": false
       },
       {
         "name": "ThroughOpeningCommandMenu",
-        "value": 12124460
+        "value": 12124460,
+        "commandPages": [
+          ["None", "None"]
+        ]
       },
       {
         "name": "SharedFormationSubmenu",
         "value": 19202348,
-        "aliases": [
-          "DoorStackUpSubmenu",
-          "GroundFallInSubmenu"
+        "aliases": ["DoorStackUpSubmenu", "GroundFallInSubmenu"],
+        "commandPages": [
+          ["StackUpSplit", "StackUpLeft", "StackUpRight", "StackUp"],
+          ["FallIn_Snake", "FallIn_HalfSnake", "FallIn_Diamond", "FallIn_Flock"]
         ]
       },
       {
         "name": "DoorOpenSubmenu",
-        "value": 26476844
+        "value": 26476844,
+        "commandPages": [
+          ["*Clear", "*ClearFlashbang", "*ClearStinger", "*ClearCSGas", "*Clear9Bang", "*ClearLauncher", "*ClearLeader"]
+        ]
       },
       {
         "name": "SharedBreachLikeSubmenu",
         "value": 21627180,
-        "aliases": [
-          "DoorBreachSubmenu",
-          "ThroughOpeningDoorwaySubmenu"
+        "aliases": ["DoorBreachSubmenu", "ThroughOpeningDoorwaySubmenu"],
+        "commandPages": [
+          ["None", "None", "None", "None", "None"],
+          ["StackUp|None", "None", "None", "None", "Cover"]
         ]
       },
       {
         "name": "DoorScanSubmenu",
-        "value": 16777516
+        "value": 16777516,
+        "commandPages": [
+          ["Slide", "Slice", "Snap"]
+        ]
       },
       {
         "name": "GroundCommandMenu",
-        "value": 21823788
+        "value": 21823788,
+        "commandPages": [
+          ["MoveTo", "None", "Cover", "Hold", "None", "SearchAndSecureRoom|SearchAndSecure"]
+        ]
       },
       {
         "name": "GroundDeploySubmenu",
-        "value": 24052012
+        "value": 24052012,
+        "commandPages": [
+          ["DeployFlashbang", "DeployStinger", "DeployCSGas", "Deploy9Bang", "DeployChemlight", "DeployShield"]
+        ]
       },
       {
         "name": "CivilianSuspectCommandMenu",
-        "value": 15663404
+        "value": 15663404,
+        "commandPages": [
+          ["DoArrestTarget", "None", "None", "TurnAround_Individual", "MoveTo_Exit_Individual"]
+        ]
       },
       {
         "name": "CivilianSuspectMoveSubmenu",
-        "value": 13041964
+        "value": 13041964,
+        "commandPages": [
+          ["MoveTo_Individual", "MoveTo_MyPosition_Individual", "MoveTo_Stop_Individual"]
+        ]
       },
       {
         "name": "IndividualSwatCommandMenu",
-        "value": 14352684
+        "value": 14352684,
+        "commandPages": [
+          ["None", "None", "None", "SearchAndSecureRoom_Individual"],
+          ["None", "None", "None", "SearchAndSecureRoom_Individual", "DeployShield|HolsterShield"]
+        ]
       },
       {
         "name": "IndividualSwatMoveSubmenu",
-        "value": 10617132
+        "value": 10617132,
+        "commandPages": [
+          ["MoveTo_Individual", "MoveToAndBack_Individual"]
+        ]
       },
       {
         "name": "IndividualSwatFocusSubmenu",
-        "value": 17891628
+        "value": 17891628,
+        "commandPages": [
+          ["Focus_Individual", "Focus_MyPosition_Individual", "FocusDoor_Individual", "FocusTarget_Individual", "UnFocus_Individual"]
+        ]
       },
       {
         "name": "IndividualSwatSwapWithSubmenu",
-        "value": 15466796
+        "value": 15466796,
+        "commandPages": [
+          ["SwapWithAlpha*", "SwapWithBeta*", "SwapWithCharlie*", "SwapWithDelta*"]
+        ]
       }
     ],
     "pointers": [

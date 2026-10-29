@@ -5,7 +5,7 @@ namespace VoiceReady.App;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
         try
         {
@@ -20,7 +20,9 @@ internal static class Program
                 }
             };
 
-            Application.Run(new MainForm());
+            // --voice-test: listen and parse commands without attaching to Ready or Not or sending input.
+            var voiceTestMode = args.Any(arg => arg.Equals("--voice-test", StringComparison.OrdinalIgnoreCase));
+            Application.Run(new MainForm(voiceTestMode));
         }
         catch (Exception ex)
         {

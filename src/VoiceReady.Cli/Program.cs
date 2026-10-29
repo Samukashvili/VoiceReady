@@ -45,7 +45,7 @@ catch (Exception ex)
 ProcessMemoryReader processReader;
 try
 {
-    processReader = ProcessMemoryReader.AttachByProcessName(memoryMap.ProcessNames);
+    processReader = ProcessMemoryReader.AttachToGame(voiceSettings.Game.ExecutablePath, memoryMap.ProcessNames, memoryMap.ProcessNamePattern);
 }
 catch (Exception ex)
 {
@@ -62,8 +62,22 @@ using (processReader)
         shutdown.Cancel();
     };
 
-    var menuReader = new MenuStateReader(processReader, memoryMap.MenuState.PointerPaths);
-    var teamSelectionReader = new MenuStateReader(processReader, memoryMap.TeamSelection.PointerPaths);
+    CommandMenuReflectionReader? reflectionReader = null;
+    if (memoryMap.Reflection.Enabled)
+    {
+        try
+        {
+            reflectionReader = CommandMenuReflectionReader.Create(processReader, memoryMap.Reflection, memoryMap.MenuState.KnownStates);
+            Console.WriteLine("Reading menu and team state through Unreal reflection.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unreal reflection unavailable, using pointer paths: {ex.Message}");
+        }
+    }
+
+    var menuReader = new MenuStateReader(processReader, memoryMap.MenuState.PointerPaths, reflectionReader is null ? null : reflectionReader.ReadMenuState);
+    var teamSelectionReader = new MenuStateReader(processReader, memoryMap.TeamSelection.PointerPaths, reflectionReader is null ? null : reflectionReader.ReadTeamSelection);
     var knownStates = memoryMap.MenuState.KnownStates.ToDictionary(
         state => state.Value,
         state => state.Aliases.Count == 0 ? state.Name : $"{state.Name}/{string.Join("/", state.Aliases)}");
@@ -84,8 +98,8 @@ using (processReader)
         voiceSettings.Input);
 
     Console.WriteLine($"Attached to {processReader.ProcessName} ({processReader.ProcessId}).");
-    Console.WriteLine($"Reading {memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
-    Console.WriteLine($"Reading {memoryMap.TeamSelection.PointerPaths.Count} team-selection pointer paths.");
+    Console.WriteLine($"Fallback: {memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
+    Console.WriteLine($"Fallback: {memoryMap.TeamSelection.PointerPaths.Count} team-selection pointer paths.");
     Console.WriteLine("Temporary test hotkey: ; executes Door -> Breach -> C2 -> Clear when DoorCommandMenu is active.");
     Console.WriteLine(voiceEnabled ? "Voice mode enabled." : "Voice mode disabled. Start with --voice to enable microphone transcription.");
     Console.WriteLine("Press Ctrl+C to stop.");
@@ -149,10 +163,12 @@ using (processReader)
                 ? $", states={string.Join("/", matchingCommandStates.Select(state => state.Name))}, commands={string.Join("/", matchingCommandStates.Select(state => state.Commands.Count))}"
                 : string.Empty;
 
+            var detailText = snapshot.Detail is null ? string.Empty : $", detail={snapshot.Detail}";
+            var fallbackText = menuReader.FallbackReason is null ? string.Empty : $", fallback={menuReader.FallbackReason}";
             Console.WriteLine(
-                $"{DateTimeOffset.Now:HH:mm:ss.fff} value={valueText}, confidence={snapshot.Confidence:P0}, reads={snapshot.SuccessfulReads}, failed={snapshot.FailedReads}{commandText}");
+                $"{DateTimeOffset.Now:HH:mm:ss.fff} value={valueText}, source={snapshot.Source}, confidence={snapshot.Confidence:P0}, reads={snapshot.SuccessfulReads}, failed={snapshot.FailedReads}{commandText}{detailText}{fallbackText}");
 
-            if (snapshot.SuccessfulReads == 0)
+            if (!snapshot.IsDirect && snapshot.SuccessfulReads == 0)
             {
                 foreach (var failedRead in snapshot.Reads.Where(read => !read.Success).Take(5))
                 {
@@ -170,7 +186,7 @@ using (processReader)
                 .FirstOrDefault(selection => selection.Value == teamSnapshot.VotedValue)?.Name
                 ?? "Unmapped";
             Console.WriteLine(
-                $"{DateTimeOffset.Now:HH:mm:ss.fff} team={teamSnapshot.VotedValue?.ToString() ?? "no consensus"} ({teamName}), confidence={teamSnapshot.Confidence:P0}, reads={teamSnapshot.SuccessfulReads}, failed={teamSnapshot.FailedReads}");
+                $"{DateTimeOffset.Now:HH:mm:ss.fff} team={teamSnapshot.VotedValue?.ToString() ?? "no consensus"} ({teamName}), source={teamSnapshot.Source}, confidence={teamSnapshot.Confidence:P0}, reads={teamSnapshot.SuccessfulReads}, failed={teamSnapshot.FailedReads}");
             lastTeamValue = teamSnapshot.VotedValue;
         }
 

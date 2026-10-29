@@ -23,16 +23,17 @@ public sealed class MainForm : Form
     private readonly Button _startStopButton = new();
     private readonly Button _refreshDevicesButton = new();
     private readonly Button _microphoneTestButton = new();
-    private readonly ProgressBar _microphoneTestLevelMeter = new();
+    private readonly LevelMeter _microphoneTestLevelMeter = new();
     private readonly Label _microphoneTestLabel = new();
     private readonly CheckBox _debugCheck = new();
     private readonly RichTextBox _debugLog = new();
-    private readonly ProgressBar _levelMeter = new();
+    private readonly LevelMeter _levelMeter = new();
     private readonly Label _statusLabel = new();
     private readonly Label _menuStateLabel = new();
     private readonly Label _teamStateLabel = new();
     private readonly Label _speechLabel = new();
     private readonly Label _voiceResultLabel = new();
+    private readonly Label _gameExecutableLabel = new();
     private readonly System.Windows.Forms.Timer _stateTimer = new();
     private readonly Dictionary<string, KeybindRow> _keybindRows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Button> _navButtons = new(StringComparer.OrdinalIgnoreCase);
@@ -56,16 +57,19 @@ public sealed class MainForm : Form
     private bool _hasLoggedRoots;
     private string _activePage = "dashboard";
     private string _lastMicrophoneTestTranscript = "none";
+    private readonly bool _voiceTestMode;
 
-    private static readonly Color AppBackground = Color.FromArgb(10, 10, 11);
-    private static readonly Color SidebarBackground = Color.FromArgb(15, 15, 17);
-    private static readonly Color PanelBackground = Color.FromArgb(24, 24, 27);
-    private static readonly Color PanelBackgroundAlt = Color.FromArgb(34, 34, 38);
-    private static readonly Color BorderColor = Color.FromArgb(62, 62, 68);
-    private static readonly Color TextPrimary = Color.FromArgb(238, 238, 239);
-    private static readonly Color TextSecondary = Color.FromArgb(164, 164, 170);
-    private static readonly Color Accent = Color.FromArgb(212, 212, 216);
-    private static readonly Color AccentMuted = Color.FromArgb(45, 45, 50);
+    private static readonly Color AppBackground = Color.FromArgb(11, 12, 15);
+    private static readonly Color SidebarBackground = Color.FromArgb(16, 18, 23);
+    private static readonly Color PanelBackground = Color.FromArgb(22, 25, 31);
+    private static readonly Color PanelBackgroundAlt = Color.FromArgb(31, 35, 43);
+    private static readonly Color PanelHover = Color.FromArgb(40, 45, 56);
+    private static readonly Color BorderColor = Color.FromArgb(46, 52, 64);
+    private static readonly Color TextPrimary = Color.FromArgb(236, 238, 242);
+    private static readonly Color TextSecondary = Color.FromArgb(150, 158, 172);
+    private static readonly Color Accent = Color.FromArgb(86, 142, 255);
+    private static readonly Color AccentHover = Color.FromArgb(112, 162, 255);
+    private static readonly Color AccentMuted = Color.FromArgb(30, 40, 62);
     private static readonly Color Danger = Color.FromArgb(239, 100, 97);
     private static readonly Color Success = Color.FromArgb(87, 201, 140);
     private static readonly Color Warning = Color.FromArgb(232, 172, 85);
@@ -88,10 +92,12 @@ public sealed class MainForm : Form
         "tools\\vendor\\vosk\\native\\win-x64\\libwinpthread-1.dll"
     ];
 
-    public MainForm()
+    public MainForm(bool voiceTestMode = false)
     {
-        Text = "VoiceReady";
-        MinimumSize = new Size(920, 680);
+        _voiceTestMode = voiceTestMode;
+        Text = voiceTestMode ? "VoiceReady - voice test mode (game not attached)" : "VoiceReady";
+        MinimumSize = new Size(720, 560);
+        DoubleBuffered = true;
         Size = new Size(1120, 760);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
@@ -153,9 +159,17 @@ public sealed class MainForm : Form
         };
         brand.Controls.Add(new Label
         {
+            Text = "VOICE READY",
+            AutoSize = true,
+            Font = new Font(Font.FontFamily, 8.5f, FontStyle.Bold),
+            ForeColor = Accent,
+            Margin = new Padding(1, 0, 0, 2)
+        });
+        brand.Controls.Add(new Label
+        {
             Text = "VoiceReady",
             AutoSize = true,
-            Font = new Font(Font.FontFamily, 22, FontStyle.Bold),
+            Font = new Font(Font.FontFamily, 20, FontStyle.Bold),
             ForeColor = TextPrimary,
             Margin = new Padding(0, 0, 0, 4)
         });
@@ -208,6 +222,17 @@ public sealed class MainForm : Form
             Tag = pageId
         };
         button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor = PanelBackgroundAlt;
+        button.FlatAppearance.MouseDownBackColor = PanelHover;
+        button.Cursor = Cursors.Hand;
+        button.Paint += (_, eventArgs) =>
+        {
+            if (pageId.Equals(_activePage, StringComparison.OrdinalIgnoreCase))
+            {
+                using var bar = new SolidBrush(Accent);
+                eventArgs.Graphics.FillRectangle(bar, 0, 8, 3, button.Height - 16);
+            }
+        };
         button.Click += (_, _) => ShowPage(pageId);
         _navButtons[pageId] = button;
         return button;
@@ -238,6 +263,7 @@ public sealed class MainForm : Form
             var active = pageId.Equals(_activePage, StringComparison.OrdinalIgnoreCase);
             button.BackColor = active ? AccentMuted : SidebarBackground;
             button.ForeColor = active ? TextPrimary : TextSecondary;
+            button.Invalidate();
         }
     }
 
@@ -245,11 +271,9 @@ public sealed class MainForm : Form
     {
         var page = CreatePage("Dashboard", "Monitor recognition, memory state, and command execution.");
         var layout = (TableLayoutPanel)page.Controls[0];
-        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2 };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 46));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 54));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 36));
-        grid.RowStyles.Add(new RowStyle(SizeType.Percent, 64));
+        var grid = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 2, Margin = new Padding(0) };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         layout.Controls.Add(grid);
 
         var statusCard = CreateCard("Runtime");
@@ -265,12 +289,11 @@ public sealed class MainForm : Form
 
         _levelMeter.Minimum = 0;
         _levelMeter.Maximum = 100;
-        _levelMeter.Height = 22;
+        _levelMeter.Height = 14;
         _levelMeter.Dock = DockStyle.Top;
         _levelMeter.Margin = new Padding(0, 18, 0, 4);
         statusLayout.Controls.Add(_levelMeter);
         statusLayout.Controls.Add(CreateMutedLabel("Microphone level"));
-        grid.Controls.Add(statusCard, 0, 0);
 
         var commandCard = CreateCard("Last command");
         var commandLayout = (TableLayoutPanel)commandCard.Controls[0];
@@ -283,14 +306,12 @@ public sealed class MainForm : Form
         {
             _voiceResultLabel.Text = "Command: waiting";
         }
-        ConfigureStatusLabel(_speechLabel, 54);
-        ConfigureStatusLabel(_voiceResultLabel, 62);
+        ConfigureStatusLabel(_speechLabel, 42);
+        ConfigureStatusLabel(_voiceResultLabel, 42);
         commandLayout.Controls.Add(_speechLabel);
         commandLayout.Controls.Add(_voiceResultLabel);
-        grid.Controls.Add(commandCard, 1, 0);
 
         var stateCard = CreateCard("Game state");
-        stateCard.Margin = new Padding(0, 16, 10, 0);
         var stateLayout = (TableLayoutPanel)stateCard.Controls[0];
         if (string.IsNullOrWhiteSpace(_menuStateLabel.Text))
         {
@@ -301,21 +322,115 @@ public sealed class MainForm : Form
         {
             _teamStateLabel.Text = "Team: not connected";
         }
-        ConfigureStatusLabel(_menuStateLabel, 58);
-        ConfigureStatusLabel(_teamStateLabel, 58);
+        ConfigureStatusLabel(_menuStateLabel, 42);
+        ConfigureStatusLabel(_teamStateLabel, 42);
         stateLayout.Controls.Add(_menuStateLabel);
         stateLayout.Controls.Add(_teamStateLabel);
-        grid.Controls.Add(stateCard, 0, 1);
 
         var quickCard = CreateCard("Quick setup");
-        quickCard.Margin = new Padding(10, 16, 0, 0);
         var quickLayout = (TableLayoutPanel)quickCard.Controls[0];
         quickLayout.Controls.Add(CreateMutedLabel("Use the Audio menu for microphone and threshold tuning. Use Keybinds to match custom Ready or Not controls."));
+        quickLayout.Controls.Add(BuildGameExecutableRow());
         quickLayout.Controls.Add(CreatePageLinkButton("Open Audio", "audio"));
         quickLayout.Controls.Add(CreatePageLinkButton("Open Keybinds", "keybinds"));
-        grid.Controls.Add(quickCard, 1, 1);
 
+        Control[] cards = [statusCard, commandCard, stateCard, quickCard];
+        ArrangeDashboard(grid, cards);
+        layout.Resize += (_, _) => ArrangeDashboard(grid, cards);
         return page;
+    }
+
+    /// <summary>Two columns when there is room, one column on narrow windows.</summary>
+    private static void ArrangeDashboard(TableLayoutPanel grid, Control[] cards)
+    {
+        var columns = grid.Parent is { ClientSize.Width: < 700 } ? 1 : 2;
+        if (grid.ColumnCount == columns && grid.Controls.Count == cards.Length)
+        {
+            return;
+        }
+
+        grid.SuspendLayout();
+        grid.Controls.Clear();
+        grid.ColumnStyles.Clear();
+        grid.RowStyles.Clear();
+        grid.ColumnCount = columns;
+        grid.RowCount = (cards.Length + columns - 1) / columns;
+        for (var column = 0; column < columns; column++)
+        {
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / columns));
+        }
+
+        for (var index = 0; index < cards.Length; index++)
+        {
+            var column = index % columns;
+            cards[index].Margin = new Padding(column == 0 ? 0 : 8, 0, column == columns - 1 ? 0 : 8, 16);
+            grid.Controls.Add(cards[index], column, index / columns);
+        }
+
+        grid.ResumeLayout();
+    }
+
+    private Control BuildGameExecutableRow()
+    {
+        var group = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, RowCount = 2, AutoSize = true, Margin = new Padding(0, 4, 0, 0) };
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _gameExecutableLabel.AutoSize = true;
+        _gameExecutableLabel.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        _gameExecutableLabel.ForeColor = TextSecondary;
+        _gameExecutableLabel.Margin = new Padding(0, 0, 0, 6);
+        UpdateGameExecutableLabel();
+        group.Controls.Add(_gameExecutableLabel, 0, 0);
+        group.SetColumnSpan(_gameExecutableLabel, 2);
+
+        var chooseButton = new Button { Text = "Choose game .exe", Height = 38, Dock = DockStyle.Top, Margin = new Padding(0, 0, 6, 0) };
+        StyleSecondaryButton(chooseButton);
+        chooseButton.Click += ChooseGameExecutableClicked;
+        group.Controls.Add(chooseButton, 0, 1);
+
+        var autoButton = new Button { Text = "Auto-detect", Height = 38, Dock = DockStyle.Top, Margin = new Padding(6, 0, 0, 0) };
+        StyleSecondaryButton(autoButton);
+        autoButton.Click += (_, _) => SetGameExecutable(string.Empty);
+        group.Controls.Add(autoButton, 1, 1);
+        return group;
+    }
+
+    private void ChooseGameExecutableClicked(object? sender, EventArgs eventArgs)
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Select the Ready or Not game executable",
+            Filter = "Game executable (*.exe)|*.exe",
+            CheckFileExists = true
+        };
+        var current = _baseSettings.Game.ExecutablePath;
+        if (!string.IsNullOrWhiteSpace(current) && Directory.Exists(Path.GetDirectoryName(current)))
+        {
+            dialog.InitialDirectory = Path.GetDirectoryName(current);
+        }
+
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            SetGameExecutable(dialog.FileName);
+        }
+    }
+
+    private void SetGameExecutable(string executablePath)
+    {
+        _baseSettings = ReplaceGameSettings(_baseSettings, new GameSettings { ExecutablePath = executablePath });
+        PersistSettings();
+        UpdateGameExecutableLabel();
+        LogDiagnostic(string.IsNullOrWhiteSpace(executablePath)
+            ? "Game executable set to auto-detect."
+            : $"Game executable set to {executablePath}.");
+    }
+
+    private void UpdateGameExecutableLabel()
+    {
+        var path = _baseSettings.Game.ExecutablePath;
+        _gameExecutableLabel.Text = string.IsNullOrWhiteSpace(path)
+            ? "Game: auto-detect"
+            : $"Game: {Path.GetFileName(path)}";
     }
 
     private Control BuildAudioPage()
@@ -343,7 +458,6 @@ public sealed class MainForm : Form
 
         _automaticThresholdCheck.Text = "Automatic speech threshold";
         _automaticThresholdCheck.AutoSize = true;
-        _automaticThresholdCheck.Checked = true;
         _automaticThresholdCheck.Margin = new Padding(0, 14, 0, 4);
         _automaticThresholdCheck.ForeColor = TextPrimary;
         _automaticThresholdCheck.CheckedChanged -= ThresholdCheckedChanged;
@@ -351,9 +465,6 @@ public sealed class MainForm : Form
         cardLayout.Controls.Add(_automaticThresholdCheck);
 
         AddLabel(cardLayout, "Voice trigger threshold");
-        _startThresholdSlider.Minimum = -70;
-        _startThresholdSlider.Maximum = -15;
-        _startThresholdSlider.Value = -35;
         _startThresholdSlider.AccentColor = Accent;
         _startThresholdSlider.Dock = DockStyle.Top;
         _startThresholdSlider.Height = 38;
@@ -371,8 +482,8 @@ public sealed class MainForm : Form
         var timingGrid = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
         timingGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         timingGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        AddNumericSetting(timingGrid, "Minimum speech ms", _minimumSpeechInput, 100, 1500, 350);
-        AddNumericSetting(timingGrid, "Silence to finish ms", _trailingSilenceInput, 150, 2000, 550);
+        AddNumericSetting(timingGrid, "Minimum speech ms", _minimumSpeechInput);
+        AddNumericSetting(timingGrid, "Silence to finish ms", _trailingSilenceInput);
         cardLayout.Controls.Add(timingGrid);
 
         _microphoneTestButton.Text = "Test microphone";
@@ -386,7 +497,7 @@ public sealed class MainForm : Form
 
         _microphoneTestLevelMeter.Minimum = 0;
         _microphoneTestLevelMeter.Maximum = 100;
-        _microphoneTestLevelMeter.Height = 22;
+        _microphoneTestLevelMeter.Height = 14;
         _microphoneTestLevelMeter.Dock = DockStyle.Top;
         _microphoneTestLevelMeter.Margin = new Padding(0, 0, 0, 6);
         cardLayout.Controls.Add(_microphoneTestLevelMeter);
@@ -420,9 +531,9 @@ public sealed class MainForm : Form
 
     private Control BuildDebugPage()
     {
-        var page = CreatePage("Debug", "Inspect runtime logs and memory-reader details.");
+        var page = CreatePage("Debug", "Inspect runtime logs and memory-reader details.", fillBody: true);
         var layout = (TableLayoutPanel)page.Controls[0];
-        var card = CreateCard("Event log");
+        var card = CreateCard("Event log", fill: true);
         var cardLayout = (TableLayoutPanel)card.Controls[0];
 
         _debugCheck.Text = "Show log output";
@@ -436,10 +547,11 @@ public sealed class MainForm : Form
 
         _debugLog.Dock = DockStyle.Fill;
         _debugLog.ReadOnly = true;
-        _debugLog.BorderStyle = BorderStyle.FixedSingle;
-        _debugLog.BackColor = Color.FromArgb(12, 12, 14);
+        _debugLog.BorderStyle = BorderStyle.None;
+        _debugLog.BackColor = PanelBackgroundAlt;
         _debugLog.ForeColor = Color.FromArgb(218, 218, 222);
         _debugLog.Font = new Font("Cascadia Mono", 9);
+        UseDarkScrollbars(_debugLog);
         _debugLog.Visible = _debugCheck.Checked;
         cardLayout.Controls.Add(_debugLog);
         layout.Controls.Add(card);
@@ -452,7 +564,7 @@ public sealed class MainForm : Form
         _debugLog.Visible = _debugCheck.Checked;
     }
 
-    private Panel CreatePage(string heading, string subtitle)
+    private Panel CreatePage(string heading, string subtitle, bool fillBody = false)
     {
         var panel = new Panel
         {
@@ -460,15 +572,18 @@ public sealed class MainForm : Form
             BackColor = AppBackground
         };
 
+        // Content pages scroll when the window is too small, so controls never end up outside the frame.
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
-            AutoScroll = false
+            AutoScroll = !fillBody,
+            Padding = new Padding(0, 0, fillBody ? 0 : 6, 0)
         };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(fillBody ? new RowStyle(SizeType.Percent, 100) : new RowStyle(SizeType.AutoSize));
 
         var header = new TableLayoutPanel
         {
@@ -477,11 +592,12 @@ public sealed class MainForm : Form
             AutoSize = true,
             Margin = new Padding(0, 0, 0, 20)
         };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.Controls.Add(new Label
         {
             Text = heading,
             AutoSize = true,
-            Font = new Font(Font.FontFamily, 24, FontStyle.Bold),
+            Font = new Font(Font.FontFamily, 22, FontStyle.Bold),
             ForeColor = TextPrimary,
             Margin = new Padding(0, 0, 0, 3)
         });
@@ -490,37 +606,47 @@ public sealed class MainForm : Form
             Text = subtitle,
             AutoSize = true,
             ForeColor = TextSecondary,
+            Anchor = AnchorStyles.Left | AnchorStyles.Right,
             Margin = new Padding(1, 0, 0, 0)
         });
         layout.Controls.Add(header);
+        UseDarkScrollbars(layout);
         panel.Controls.Add(layout);
         return panel;
     }
 
-    private Panel CreateCard(string heading)
+    private Panel CreateCard(string heading, bool fill = false)
     {
-        var panel = new Panel
+        var panel = new CardPanel
         {
-            Dock = DockStyle.Fill,
-            BackColor = PanelBackground,
-            Padding = new Padding(18),
-            Margin = new Padding(0, 0, 10, 0)
+            Dock = fill ? DockStyle.Fill : DockStyle.Top,
+            AutoSize = !fill,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = AppBackground,
+            CardColor = PanelBackground,
+            BorderColor = BorderColor,
+            Padding = new Padding(20, 18, 20, 18),
+            Margin = new Padding(0, 0, 0, 16)
         };
 
         var layout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = fill ? DockStyle.Fill : DockStyle.Top,
+            AutoSize = !fill,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
             RowCount = 1,
-            AutoScroll = false
+            AutoScroll = false,
+            BackColor = PanelBackground
         };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.Controls.Add(new Label
         {
-            Text = heading,
+            Text = heading.ToUpperInvariant(),
             AutoSize = true,
-            Font = new Font(Font.FontFamily, 13, FontStyle.Bold),
-            ForeColor = TextPrimary,
+            Font = new Font(Font.FontFamily, 9, FontStyle.Bold),
+            ForeColor = TextSecondary,
             Margin = new Padding(0, 0, 0, 12)
         });
         panel.Controls.Add(layout);
@@ -538,14 +664,10 @@ public sealed class MainForm : Form
         });
     }
 
-    private static void AddNumericSetting(TableLayoutPanel layout, string label, DarkNumberInput input, int min, int max, int value)
+    private static void AddNumericSetting(TableLayoutPanel layout, string label, DarkNumberInput input)
     {
         var group = new TableLayoutPanel { Dock = DockStyle.Top, RowCount = 2, AutoSize = true, Margin = new Padding(0, 12, 8, 0) };
         group.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = TextSecondary });
-        input.Minimum = min;
-        input.Maximum = max;
-        input.Value = value;
-        input.Increment = 25;
         input.Dock = DockStyle.Top;
         input.BackColor = PanelBackgroundAlt;
         input.ForeColor = TextPrimary;
@@ -553,11 +675,21 @@ public sealed class MainForm : Form
         layout.Controls.Add(group);
     }
 
+    // Left|Right anchoring makes AutoSize labels wrap to the column width instead of overflowing it.
+    private static void UseDarkScrollbars(Control control)
+    {
+        control.HandleCreated += (_, _) => SetWindowTheme(control.Handle, "DarkMode_Explorer", null);
+    }
+
+    [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
+    private static extern int SetWindowTheme(IntPtr handle, string? subAppName, string? subIdList);
+
     private static Label CreateMutedLabel(string text) => new()
     {
         Text = text,
         AutoSize = true,
         ForeColor = TextSecondary,
+        Anchor = AnchorStyles.Left | AnchorStyles.Right,
         Margin = new Padding(0, 4, 0, 8)
     };
 
@@ -577,12 +709,13 @@ public sealed class MainForm : Form
 
     private static void ConfigureStatusLabel(Label label, int height)
     {
-        label.AutoSize = false;
-        label.Height = height;
-        label.Dock = DockStyle.Top;
+        label.AutoSize = true;
+        label.MinimumSize = new Size(0, height);
+        label.Dock = DockStyle.None;
+        label.Anchor = AnchorStyles.Left | AnchorStyles.Right;
         label.ForeColor = TextPrimary;
         label.BackColor = PanelBackgroundAlt;
-        label.Padding = new Padding(12, 10, 12, 0);
+        label.Padding = new Padding(12, 10, 12, 10);
         label.Margin = new Padding(0, 0, 0, 10);
     }
 
@@ -622,8 +755,11 @@ public sealed class MainForm : Form
     {
         button.FlatStyle = FlatStyle.Flat;
         button.BackColor = Accent;
-        button.ForeColor = Color.FromArgb(12, 12, 14);
+        button.ForeColor = Color.White;
         button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor = AccentHover;
+        button.FlatAppearance.MouseDownBackColor = Accent;
+        button.Cursor = Cursors.Hand;
         button.Font = new Font(button.Font.FontFamily, button.Font.Size, FontStyle.Bold);
     }
 
@@ -634,6 +770,9 @@ public sealed class MainForm : Form
         button.ForeColor = TextPrimary;
         button.FlatAppearance.BorderColor = BorderColor;
         button.FlatAppearance.BorderSize = 1;
+        button.FlatAppearance.MouseOverBackColor = PanelHover;
+        button.FlatAppearance.MouseDownBackColor = AccentMuted;
+        button.Cursor = Cursors.Hand;
     }
 
     private async void StartStopClicked(object? sender, EventArgs eventArgs)
@@ -699,6 +838,17 @@ public sealed class MainForm : Form
         _voiceSettingsPath = voiceSettingsPath;
         _baseSettings = ReplaceInputSettings(_baseSettings, NormalizeInputSettings(_baseSettings.Input));
 
+        // Ranges must be set before loading values, otherwise the saved values are clamped to the
+        // controls' default 0..100 range (e.g. a -35 dB threshold becomes 0 dB and no speech is ever detected).
+        _automaticThresholdCheck.Checked = true;
+        _startThresholdSlider.Minimum = -70;
+        _startThresholdSlider.Maximum = -15;
+        _minimumSpeechInput.Minimum = 100;
+        _minimumSpeechInput.Maximum = 1500;
+        _minimumSpeechInput.Increment = 25;
+        _trailingSilenceInput.Minimum = 150;
+        _trailingSilenceInput.Maximum = 2000;
+        _trailingSilenceInput.Increment = 25;
         _startThresholdSlider.Value = Clamp((int)Math.Round(_baseSettings.Audio.SpeechStartDb), _startThresholdSlider.Minimum, _startThresholdSlider.Maximum);
         _minimumSpeechInput.Value = Clamp(_baseSettings.Audio.MinimumSpeechMilliseconds, (int)_minimumSpeechInput.Minimum, (int)_minimumSpeechInput.Maximum);
         _trailingSilenceInput.Value = Clamp(_baseSettings.Audio.TrailingSilenceMilliseconds, (int)_trailingSilenceInput.Minimum, (int)_trailingSilenceInput.Maximum);
@@ -772,10 +922,37 @@ public sealed class MainForm : Form
             var settings = BuildRuntimeSettings();
             ValidateStartupAssets(settings);
             LogDiagnostic("Startup assets validated.");
-            var processReader = ProcessMemoryReader.AttachByProcessName(_memoryMap.ProcessNames);
+            if (_voiceTestMode)
+            {
+                _runtime = new RuntimeContext(null, null, null, null, new VoiceCommandParser(), null, settings);
+                LogDebug("Voice test mode: Ready or Not is not attached and no input is sent. Commands are only parsed.");
+                _menuStateLabel.Text = "Menu: voice test mode (game not attached)";
+                _teamStateLabel.Text = "Team: voice test mode (game not attached)";
+                _runtime.VoiceTask = Task.Run(() => RunVoiceLoopAsync(_runtime, _shutdown.Token));
+                _statusLabel.Text = "Running";
+                _statusLabel.ForeColor = Success;
+                _startStopButton.Text = "Stop VoiceReady";
+                return;
+            }
+
+            var processReader = ProcessMemoryReader.AttachToGame(settings.Game.ExecutablePath, _memoryMap.ProcessNames, _memoryMap.ProcessNamePattern);
             LogDiagnostic($"Attached to {processReader.ProcessName} ({processReader.ProcessId}).");
-            var menuReader = new MenuStateReader(processReader, _memoryMap.MenuState.PointerPaths);
-            var teamSelectionReader = new MenuStateReader(processReader, _memoryMap.TeamSelection.PointerPaths);
+            CommandMenuReflectionReader? reflectionReader = null;
+            if (_memoryMap.Reflection.Enabled)
+            {
+                try
+                {
+                    reflectionReader = CommandMenuReflectionReader.Create(processReader, _memoryMap.Reflection, _memoryMap.MenuState.KnownStates);
+                    LogDiagnostic("Reading menu and team state through Unreal reflection.");
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic($"Unreal reflection unavailable, using pointer paths: {ex.Message}");
+                }
+            }
+
+            var menuReader = new MenuStateReader(processReader, _memoryMap.MenuState.PointerPaths, reflectionReader is null ? null : reflectionReader.ReadMenuState);
+            var teamSelectionReader = new MenuStateReader(processReader, _memoryMap.TeamSelection.PointerPaths, reflectionReader is null ? null : reflectionReader.ReadTeamSelection);
             var keyboardInput = new KeyboardInput();
             var parser = new VoiceCommandParser();
             var executor = new CommandPlanExecutor(
@@ -788,8 +965,8 @@ public sealed class MainForm : Form
 
             _runtime = new RuntimeContext(processReader, menuReader, teamSelectionReader, keyboardInput, parser, executor, settings);
             LogDebug($"Attached to {processReader.ProcessName} ({processReader.ProcessId}).");
-            LogDebug($"Reading {_memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
-            LogDebug($"Reading {_memoryMap.TeamSelection.PointerPaths.Count} team-selection pointer paths.");
+            LogDebug($"Fallback: {_memoryMap.MenuState.PointerPaths.Count} menu-state pointer paths.");
+            LogDebug($"Fallback: {_memoryMap.TeamSelection.PointerPaths.Count} team-selection pointer paths.");
 
             LogDiagnostic("Starting voice loop task.");
             _runtime.VoiceTask = Task.Run(() => RunVoiceLoopAsync(_runtime, _shutdown.Token));
@@ -1021,6 +1198,15 @@ public sealed class MainForm : Form
                             continue;
                         }
 
+                        if (runtime.Executor is null)
+                        {
+                            var steps = string.Join(" > ", plan.Steps.Select(step => $"{step.Key}:{step.Name}"));
+                            var team = plan.TeamSelection is null ? string.Empty : $" team={plan.TeamSelection}";
+                            BeginInvoke(() => _voiceResultLabel.Text = $"Command: would run {plan.Name} ({steps}){team}");
+                            LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} voice result=test {plan.Name} from {plan.RequiredInitialState}: {steps}{team}");
+                            continue;
+                        }
+
                         var executed = runtime.Executor.TryExecute(plan, out var message);
                         BeginInvoke(() => _voiceResultLabel.Text = $"Command: {(executed ? "sent" : "blocked")} - {message}");
                         LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} voice result={(executed ? "sent" : "blocked")} {message}");
@@ -1091,14 +1277,15 @@ public sealed class MainForm : Form
 
     private void RefreshRuntimeState()
     {
-        if (_runtime is null || _memoryMap is null)
+        if (_runtime is not { ProcessReader: { } processReader, MenuReader: { } menuReader, TeamSelectionReader: { } teamSelectionReader } ||
+            _memoryMap is null)
         {
             return;
         }
 
         if (!_hasLoggedRoots)
         {
-            foreach (var root in _runtime.ProcessReader.RootResolutions.OrderBy(root => root.ConfiguredOffset))
+            foreach (var root in processReader.RootResolutions.OrderBy(root => root.ConfiguredOffset))
             {
                 var source = root.UsedSignature ? "signature" : "fallback";
                 var moved = root.ConfiguredOffset == root.ResolvedOffset ? string.Empty : $" moved-from=+0x{root.ConfiguredOffset:X}";
@@ -1109,8 +1296,8 @@ public sealed class MainForm : Form
             _hasLoggedRoots = true;
         }
 
-        var snapshot = _runtime.MenuReader.Read();
-        var teamSnapshot = _runtime.TeamSelectionReader.Read();
+        var snapshot = menuReader.Read();
+        var teamSnapshot = teamSelectionReader.Read();
         var knownStates = _memoryMap.MenuState.KnownStates.ToDictionary(
             state => state.Value,
             state => state.Aliases.Count == 0 ? state.Name : $"{state.Name}/{string.Join("/", state.Aliases)}");
@@ -1132,7 +1319,9 @@ public sealed class MainForm : Form
             var commandText = snapshot.VotedValue.HasValue && commandStates.TryGetValue(snapshot.VotedValue.Value, out var matchingCommandStates)
                 ? $", states={string.Join("/", matchingCommandStates.Select(state => state.Name))}, commands={string.Join("/", matchingCommandStates.Select(state => state.Commands.Count))}"
                 : string.Empty;
-            LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} value={valueText}, confidence={snapshot.Confidence:P0}, reads={snapshot.SuccessfulReads}, failed={snapshot.FailedReads}{commandText}");
+            var detailText = snapshot.Detail is null ? string.Empty : $", detail={snapshot.Detail}";
+            var fallbackText = menuReader.FallbackReason is null ? string.Empty : $", fallback={menuReader.FallbackReason}";
+            LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} value={valueText}, source={snapshot.Source}, confidence={snapshot.Confidence:P0}, reads={snapshot.SuccessfulReads}, failed={snapshot.FailedReads}{commandText}{detailText}{fallbackText}");
             LogFailedReads(snapshot);
             _lastMenuValue = snapshot.VotedValue;
         }
@@ -1146,14 +1335,14 @@ public sealed class MainForm : Form
 
         if (teamSnapshot.VotedValue != _lastTeamValue)
         {
-            LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} team={teamSnapshot.VotedValue?.ToString() ?? "no consensus"} ({teamName}), confidence={teamSnapshot.Confidence:P0}, reads={teamSnapshot.SuccessfulReads}, failed={teamSnapshot.FailedReads}");
+            LogDebug($"{DateTimeOffset.Now:HH:mm:ss.fff} team={teamSnapshot.VotedValue?.ToString() ?? "no consensus"} ({teamName}), source={teamSnapshot.Source}, confidence={teamSnapshot.Confidence:P0}, reads={teamSnapshot.SuccessfulReads}, failed={teamSnapshot.FailedReads}");
             _lastTeamValue = teamSnapshot.VotedValue;
         }
     }
 
     private void LogFailedReads(MenuStateSnapshot snapshot)
     {
-        if (snapshot.SuccessfulReads != 0)
+        if (snapshot.IsDirect || snapshot.SuccessfulReads != 0)
         {
             return;
         }
@@ -1191,7 +1380,8 @@ public sealed class MainForm : Form
                 MaximumSegmentMilliseconds = audio.MaximumSegmentMilliseconds
             },
             Vosk = settings.Vosk,
-            Input = settings.Input
+            Input = settings.Input,
+            Game = settings.Game
         };
     }
 
@@ -1229,8 +1419,8 @@ public sealed class MainForm : Form
             Padding = new Padding(0, 6, 0, 0)
         };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 84));
         group.Controls.Add(grid);
 
         AddKeybindRow(grid, "commandMenuOpen", "Open command menu");
@@ -1255,6 +1445,7 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ForeColor = TextSecondary,
             TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
             Margin = new Padding(0, 3, 8, 3),
             Anchor = AnchorStyles.Left | AnchorStyles.Right
         };
@@ -1262,7 +1453,7 @@ public sealed class MainForm : Form
         var bindButton = new Button
         {
             Text = "Default",
-            Width = 154,
+            Width = 140,
             Height = 32,
             Margin = new Padding(0, 4, 8, 4),
             Anchor = AnchorStyles.None,
@@ -1276,7 +1467,7 @@ public sealed class MainForm : Form
         {
             Text = "Reset",
             AutoSize = false,
-            Width = 80,
+            Width = 76,
             Height = 32,
             Margin = new Padding(0, 4, 0, 4),
             Anchor = AnchorStyles.None,
@@ -1452,7 +1643,16 @@ public sealed class MainForm : Form
     {
         Audio = settings.Audio,
         Vosk = settings.Vosk,
-        Input = input
+        Input = input,
+        Game = settings.Game
+    };
+
+    private static VoiceReadySettings ReplaceGameSettings(VoiceReadySettings settings, GameSettings game) => new()
+    {
+        Audio = settings.Audio,
+        Vosk = settings.Vosk,
+        Input = settings.Input,
+        Game = game
     };
 
     private void PersistSettings()
@@ -1499,6 +1699,7 @@ public sealed class MainForm : Form
     {
         var value = Clamp((int)Math.Round((decibels + 70) / 55 * 100), 0, 100);
         _levelMeter.Value = value;
+        _levelMeter.Active = speaking;
         _statusLabel.Text = _runtime is null ? "Stopped" : speaking ? "Listening" : "Running";
         _statusLabel.ForeColor = _runtime is null ? Danger : speaking ? Accent : Success;
     }
@@ -1508,6 +1709,7 @@ public sealed class MainForm : Form
         var value = Clamp((int)Math.Round((decibels + 70) / 55 * 100), 0, 100);
         _levelMeter.Value = value;
         _microphoneTestLevelMeter.Value = value;
+        _microphoneTestLevelMeter.Active = speaking;
         var state = speaking ? "hearing speech" : "listening";
         _microphoneTestLabel.Text = $"Mic test: {state}\nLast transcript: {_lastMicrophoneTestTranscript}";
     }
@@ -1684,6 +1886,145 @@ public sealed class MainForm : Form
     }
 
     private sealed record KeybindRow(Button BindButton, Button ResetButton);
+
+    /// <summary>Card with rounded corners and a hairline border.</summary>
+    private sealed class CardPanel : Panel
+    {
+        public CardPanel()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Color CardColor { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Color BorderColor { get; set; }
+
+        public override Size GetPreferredSize(Size proposedSize)
+        {
+            if (Controls.Count == 0 || Dock == DockStyle.Fill)
+            {
+                return base.GetPreferredSize(proposedSize);
+            }
+
+            // Measure at the width the card actually has: a parent TableLayoutPanel proposes the whole
+            // grid width, which under-counts wrapped text in a narrower column.
+            var width = Width > 0 ? Width : proposedSize.Width;
+            var content = Controls[0].GetPreferredSize(new Size(Math.Max(1, width - Padding.Horizontal), 0));
+            return new Size(width, content.Height + Padding.Vertical);
+        }
+
+        private int _lastWidth;
+
+        protected override void OnSizeChanged(EventArgs eventArgs)
+        {
+            base.OnSizeChanged(eventArgs);
+            if (Width != _lastWidth)
+            {
+                _lastWidth = Width;
+                Parent?.PerformLayout();
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            base.OnPaint(eventArgs);
+            eventArgs.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var path = RoundedRectangle(new Rectangle(0, 0, Width - 1, Height - 1), 10);
+            using var fill = new SolidBrush(CardColor);
+            using var border = new Pen(BorderColor);
+            eventArgs.Graphics.FillPath(fill, path);
+            eventArgs.Graphics.DrawPath(border, path);
+        }
+    }
+
+    /// <summary>Flat audio level bar; turns green while speech is detected.</summary>
+    private sealed class LevelMeter : Control
+    {
+        private int _value;
+        private bool _active;
+
+        public LevelMeter()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Minimum { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Maximum { get; set; } = 100;
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Value
+        {
+            get => _value;
+            set
+            {
+                var next = Math.Clamp(value, Minimum, Maximum);
+                if (next != _value)
+                {
+                    _value = next;
+                    Invalidate();
+                }
+            }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool Active
+        {
+            get => _active;
+            set
+            {
+                if (value != _active)
+                {
+                    _active = value;
+                    Invalidate();
+                }
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            var graphics = eventArgs.Graphics;
+            graphics.Clear(Parent?.BackColor ?? PanelBackground);
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var radius = Math.Max(2, Height / 2);
+            using (var track = RoundedRectangle(new Rectangle(0, 0, Width - 1, Height - 1), radius))
+            using (var trackBrush = new SolidBrush(PanelBackgroundAlt))
+            {
+                graphics.FillPath(trackBrush, track);
+            }
+
+            var range = Math.Max(1, Maximum - Minimum);
+            var width = (int)Math.Round((Width - 1) * (double)(_value - Minimum) / range);
+            if (width >= Height)
+            {
+                using var bar = RoundedRectangle(new Rectangle(0, 0, width, Height - 1), radius);
+                using var barBrush = new SolidBrush(_active ? Success : Accent);
+                graphics.FillPath(barBrush, bar);
+            }
+        }
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath RoundedRectangle(Rectangle bounds, int radius)
+    {
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        var diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+        if (diameter <= 0)
+        {
+            path.AddRectangle(bounds);
+            return path;
+        }
+
+        path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
 
     private sealed class DarkSlider : Control
     {
@@ -1943,26 +2284,27 @@ public sealed class MainForm : Form
         }
     }
 
+    /// <summary>Game-facing members are null in voice test mode, where nothing is attached.</summary>
     private sealed class RuntimeContext(
-        ProcessMemoryReader processReader,
-        MenuStateReader menuReader,
-        MenuStateReader teamSelectionReader,
-        KeyboardInput keyboardInput,
+        ProcessMemoryReader? processReader,
+        MenuStateReader? menuReader,
+        MenuStateReader? teamSelectionReader,
+        KeyboardInput? keyboardInput,
         VoiceCommandParser parser,
-        CommandPlanExecutor executor,
+        CommandPlanExecutor? executor,
         VoiceReadySettings settings) : IDisposable
     {
-        public ProcessMemoryReader ProcessReader { get; } = processReader;
+        public ProcessMemoryReader? ProcessReader { get; } = processReader;
 
-        public MenuStateReader MenuReader { get; } = menuReader;
+        public MenuStateReader? MenuReader { get; } = menuReader;
 
-        public MenuStateReader TeamSelectionReader { get; } = teamSelectionReader;
+        public MenuStateReader? TeamSelectionReader { get; } = teamSelectionReader;
 
-        public KeyboardInput KeyboardInput { get; } = keyboardInput;
+        public KeyboardInput? KeyboardInput { get; } = keyboardInput;
 
         public VoiceCommandParser Parser { get; } = parser;
 
-        public CommandPlanExecutor Executor { get; } = executor;
+        public CommandPlanExecutor? Executor { get; } = executor;
 
         public VoiceReadySettings Settings { get; } = settings;
 
@@ -1970,7 +2312,7 @@ public sealed class MainForm : Form
 
         public void Dispose()
         {
-            ProcessReader.Dispose();
+            ProcessReader?.Dispose();
         }
     }
 }

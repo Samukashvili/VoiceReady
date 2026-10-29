@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace VoiceReady.Core.Memory;
 
@@ -35,26 +36,59 @@ public sealed class ProcessMemoryReader : IDisposable
 
     public IReadOnlyCollection<PointerRootResolution> RootResolutions => _rootResolutions.Values;
 
-    public static ProcessMemoryReader AttachByProcessName(params string[] processNames)
+    public string MainModuleName => _process.MainModule?.ModuleName
+        ?? throw new InvalidOperationException("Could not read the main module of the game process.");
+
+    /// <summary>
+    /// Attaches to the game. A selected executable wins; otherwise the configured process names are tried,
+    /// then any running process whose name matches <paramref name="processNamePattern"/> ('*' wildcard).
+    /// </summary>
+    public static ProcessMemoryReader AttachToGame(string? executablePath, IReadOnlyList<string> processNames, string? processNamePattern)
     {
+        if (!string.IsNullOrWhiteSpace(executablePath))
+        {
+            var selectedName = Path.GetFileNameWithoutExtension(executablePath);
+            var selected = Process.GetProcessesByName(selectedName).FirstOrDefault();
+            return selected is null
+                ? throw new InvalidOperationException($"Selected game executable is not running: {Path.GetFileName(executablePath)}")
+                : Open(selected);
+        }
+
         foreach (var processName in processNames)
         {
             var process = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processName)).FirstOrDefault();
-            if (process is null)
+            if (process is not null)
             {
-                continue;
+                return Open(process);
             }
-
-            var handle = OpenProcess(ProcessQueryLimitedInformation | ProcessVmRead, false, process.Id);
-            if (handle == IntPtr.Zero)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Could not open process {process.ProcessName} ({process.Id}).");
-            }
-
-            return new ProcessMemoryReader(process, handle);
         }
 
-        throw new InvalidOperationException($"No matching process found: {string.Join(", ", processNames)}");
+        if (!string.IsNullOrWhiteSpace(processNamePattern))
+        {
+            var pattern = new Regex(
+                "^" + Regex.Escape(Path.GetFileNameWithoutExtension(processNamePattern)).Replace(@"\*", ".*") + "$",
+                RegexOptions.IgnoreCase);
+            var match = Process.GetProcesses().FirstOrDefault(process => pattern.IsMatch(process.ProcessName));
+            if (match is not null)
+            {
+                return Open(match);
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Ready or Not is not running (looked for {string.Join(", ", processNames.Append(processNamePattern ?? string.Empty).Where(name => name.Length > 0))}). " +
+            "If your game uses a different executable, choose it in VoiceReady.");
+    }
+
+    private static ProcessMemoryReader Open(Process process)
+    {
+        var handle = OpenProcess(ProcessQueryLimitedInformation | ProcessVmRead, false, process.Id);
+        if (handle == IntPtr.Zero)
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(), $"Could not open process {process.ProcessName} ({process.Id}).");
+        }
+
+        return new ProcessMemoryReader(process, handle);
     }
 
     public PointerReadResult ReadInt32(PointerPath pointer)
@@ -74,7 +108,8 @@ public sealed class ProcessMemoryReader : IDisposable
 
     public IntPtr ResolvePointer(PointerPath pointer)
     {
-        if (!_modules.TryGetValue(pointer.ModuleName, out var module))
+        if (!_modules.TryGetValue(pointer.ModuleName, out var module) &&
+            (_process.MainModule is null || !_modules.TryGetValue(_process.MainModule.ModuleName, out module)))
         {
             throw new InvalidOperationException($"Module not found in process: {pointer.ModuleName}");
         }
@@ -136,6 +171,23 @@ public sealed class ProcessMemoryReader : IDisposable
             address.ToInt64() - module.BaseAddress.ToInt64(),
             usedSignature,
             error);
+    }
+
+    public IntPtr ResolveSignature(string moduleName, PointerRootSignature signature)
+    {
+        if (!_modules.TryGetValue(moduleName, out var module))
+        {
+            throw new InvalidOperationException($"Module not found in process: {moduleName}");
+        }
+
+        return ResolveSignatureRoot(module, signature);
+    }
+
+    public bool TryReadBytes(IntPtr address, byte[] destination)
+    {
+        return address != IntPtr.Zero &&
+            ReadProcessMemory(_handle, address, destination, destination.Length, out var bytesRead) &&
+            bytesRead == destination.Length;
     }
 
     private IntPtr ResolveSignatureRoot(ProcessModule module, PointerRootSignature signature)
