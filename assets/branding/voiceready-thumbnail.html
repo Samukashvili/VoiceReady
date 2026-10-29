@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VoiceReady thumbnail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;800&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gunmetal: #161C24;
+    --gunmetal-deep: #10151B;
+    --steel: #2A3340;
+    --fog: #9AA6B8;
+    --paper: #ECEEF2;
+    --amber: #F2B544;
+  }
+  html, body { margin: 0; background: var(--gunmetal-deep); }
+  .frame {
+    width: 1280px; height: 640px; box-sizing: border-box;
+    position: relative; overflow: hidden;
+    display: grid; grid-template-columns: 520px 1fr; align-items: center;
+    padding: 0 96px 0 72px;
+    background:
+      radial-gradient(640px 520px at 300px 330px, #1D2530 0%, transparent 70%),
+      var(--gunmetal);
+  }
+  /* faint scan lines, like a radio display */
+  .frame::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+  }
+  .mark { width: 460px; height: 460px; display: block; }
+  .copy { position: relative; }
+  h1 {
+    margin: 0; font-family: "Big Shoulders Display", sans-serif; font-weight: 800;
+    font-size: 148px; line-height: .88; letter-spacing: -1px; color: var(--paper);
+  }
+  .phrase {
+    margin: 34px 0 0; font-family: "Big Shoulders Display", sans-serif; font-weight: 500;
+    font-size: 54px; line-height: 1; color: var(--amber);
+  }
+  .phrase::before { content: "\201C"; }
+  .phrase::after { content: "\201D"; }
+  .rule { width: 72px; height: 4px; background: var(--steel); margin: 36px 0 22px; }
+  .line {
+    margin: 0; font-family: "IBM Plex Sans", sans-serif; font-size: 25px; line-height: 1.4;
+    color: var(--fog); max-width: 560px;
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <svg class="mark" viewBox="60 80 392 344" aria-hidden="true">
+      <g fill="#F2B544">
+        <polygon points="76,200 112,200 112,280 76,250"/>
+        <polygon points="130,140 166,140 166,325 130,295"/>
+        <polygon points="184,172 220,172 220,370 184,340"/>
+        <polygon points="238,96 274,96 274,385 256,400 238,385"/>
+        <polygon points="292,150 328,150 328,340 292,370"/>
+        <polygon points="346,118 382,118 382,295 346,325"/>
+        <polygon points="400,190 436,190 436,250 400,280"/>
+      </g>
+    </svg>
+    <div class="copy">
+      <h1>Voice<br>Ready</h1>
+      <p class="phrase">Breach and clear</p>
+      <div class="rule"></div>
+      <p class="line">Local voice commands for Ready or Not. You give the order, VoiceReady presses the keys.</p>
+    </div>
+  </div>
+</body>
+</html>

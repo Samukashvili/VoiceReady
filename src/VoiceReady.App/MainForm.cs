@@ -96,6 +96,13 @@ public sealed class MainForm : Form
     {
         _voiceTestMode = voiceTestMode;
         Text = voiceTestMode ? "VoiceReady - voice test mode (game not attached)" : "VoiceReady";
+        using (var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("VoiceReady.App.voiceready.ico"))
+        {
+            if (iconStream is not null)
+            {
+                Icon = new Icon(iconStream);
+            }
+        }
         MinimumSize = new Size(720, 560);
         DoubleBuffered = true;
         Size = new Size(1120, 760);

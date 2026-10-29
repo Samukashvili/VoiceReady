@@ -8,6 +8,7 @@
     <None Include="..\..\config\memory_map.json" Link="config\memory_map.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\config\command_menus.json" Link="config\command_menus.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\config\voice_ready.json" Link="config\voice_ready.json" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="..\..\assets\branding\voiceready.ico" LogicalName="VoiceReady.App.voiceready.ico" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -16,6 +17,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationIcon>..\..\assets\branding\voiceready.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>

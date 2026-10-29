@@ -1,5 +1,7 @@
 # VoiceReady
 
+![VoiceReady](assets/branding/voiceready-thumbnail.png)
+
 VoiceReady is a local voice-command assistant for Ready or Not. It listens to your microphone, recognizes supported spoken commands with a local Vosk speech model, checks the current in-game command-menu state, and sends the matching keyboard or mouse input.
 
 VoiceReady does not modify game files, write process memory, inject code, or use a remote transcription service.

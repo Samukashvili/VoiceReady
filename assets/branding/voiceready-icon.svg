@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>VoiceReady</title>
+  <!-- Voice waveform on top, cut into a "V" chevron underneath: spoken words in, command out. -->
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="#161C24"/>
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#2A3340" stroke-width="4"/>
+  <g fill="#F2B544" transform="translate(0 8)">
+    <polygon points="76,200 112,200 112,280 76,250"/>
+    <polygon points="130,140 166,140 166,325 130,295"/>
+    <polygon points="184,172 220,172 220,370 184,340"/>
+    <polygon points="238,96 274,96 274,385 256,400 238,385"/>
+    <polygon points="292,150 328,150 328,340 292,370"/>
+    <polygon points="346,118 382,118 382,295 346,325"/>
+    <polygon points="400,190 436,190 436,250 400,280"/>
+  </g>
+</svg>
